@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GhostScreen - Onboarding</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+</style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "outline-variant": "#cbc4d2",
+                "surface-variant": "#e5e1e7",
+                "surface-container-highest": "#e5e1e7",
+                "on-tertiary-fixed-variant": "#633b48",
+                "primary": "#4f378a",
+                "on-tertiary": "#ffffff",
+                "on-error-container": "#93000a",
+                "surface-container-high": "#ebe7ec",
+                "on-primary": "#ffffff",
+                "on-secondary-container": "#686177",
+                "primary-fixed-dim": "#cfbcff",
+                "on-secondary-fixed-variant": "#4a4358",
+                "on-secondary-fixed": "#1e192b",
+                "on-background": "#1c1b1f",
+                "on-surface": "#1c1b1f",
+                "surface-container-low": "#f7f2f8",
+                "on-secondary": "#ffffff",
+                "surface-container": "#f1ecf2",
+                "on-primary-fixed": "#22005d",
+                "background": "#fdf8fd",
+                "tertiary": "#633b48",
+                "on-tertiary-container": "#ffcbda",
+                "inverse-on-surface": "#f4eff5",
+                "secondary": "#625b71",
+                "primary-container": "#6750a4",
+                "on-surface-variant": "#494551",
+                "secondary-fixed": "#e8def9",
+                "error-container": "#ffdad6",
+                "inverse-surface": "#313034",
+                "secondary-container": "#e8def9",
+                "tertiary-container": "#7d5260",
+                "tertiary-fixed": "#ffd9e3",
+                "on-tertiary-fixed": "#31111d",
+                "surface-bright": "#fdf8fd",
+                "outline": "#7a7582",
+                "surface-tint": "#6750a4",
+                "tertiary-fixed-dim": "#eeb8c8",
+                "surface-dim": "#ddd9de",
+                "on-primary-fixed-variant": "#4f378a",
+                "error": "#ba1a1a",
+                "secondary-fixed-dim": "#ccc2dc",
+                "on-primary-container": "#e0d2ff",
+                "inverse-primary": "#cfbcff",
+                "on-error": "#ffffff",
+                "surface": "#fdf8fd",
+                "primary-fixed": "#e9ddff",
+                "surface-container-lowest": "#ffffff"
+        },
+        "borderRadius": {
+                "DEFAULT": "1rem",
+                "lg": "2rem",
+                "xl": "3rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-mobile": "16px",
+                "pill-padding-x": "24px",
+                "margin-desktop": "24px",
+                "base": "8px",
+                "gutter": "16px",
+                "pill-padding-y": "16px"
+        },
+        "fontFamily": {
+                "body-lg": [
+                        "Roboto Flex"
+                ],
+                "label-md": [
+                        "Roboto Flex"
+                ],
+                "headline-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "title-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "headline-lg-mobile": [
+                        "Plus Jakarta Sans"
+                ],
+                "label-lg": [
+                        "Roboto Flex"
+                ],
+                "display-lg": [
+                        "Plus Jakarta Sans"
+                ],
+                "body-md": [
+                        "Roboto Flex"
+                ]
+        },
+        "fontSize": {
+                "body-lg": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "letterSpacing": "0.5px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-md": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.5px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "title-lg": [
+                        "22px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-lg": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.1px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "display-lg": [
+                        "57px",
+                        {
+                                "lineHeight": "64px",
+                                "letterSpacing": "-0.25px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.25px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+  /* Custom utility for safe area padding on mobile */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+  
+  /* Smooth expressive squish animation */
+  .btn-squish {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+  }
+  .btn-squish:active {
+    transform: scale(0.95);
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background h-screen w-full overflow-hidden flex flex-col md:max-w-md md:mx-auto md:border-x md:border-surface-variant md:shadow-2xl">
+<!-- Suppressing Shells (TopAppBar, BottomNavBar) as per the 'Automatic Suppression' rule for Onboarding flows. -->
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col relative w-full h-full">
+<!-- Hero Illustration Container -->
+<div class="flex-1 w-full bg-surface-container-highest rounded-b-xl overflow-hidden relative shadow-sm">
+<img alt="Illustration placeholder" class="w-full h-full object-cover opacity-80 mix-blend-luminosity" data-alt="A vibrant, expressive 3D illustration of a person sitting on a crowded public bus while using a smartphone. A glowing, semi-transparent holographic privacy shield brightly surrounds the phone screen, deflecting the curious, blurry silhouettes of nearby passengers. The scene uses a modern, high-polish aesthetic with a dark mode color palette, featuring deep rich purples and contrasting bright neon accents. The lighting is dynamic, emphasizing the protective glowing energy of the privacy mask against the moody, dimly lit interior of the bus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0Yw6W5Qx-jodSPhovpHojRw5I6IVdgCvzPJgVMYtaMqJLsa2jhsAdvMU6lzJBo70qp0aYfpRMKyXmOICt2FuUqAn3voTzGcF_WHQSQwrQZARmGg6lMZaKpr5oZuaZ4PhNyXHO6DbMXnOMlm-RXABZHHK1rKTE9Lt_gYGL6ZkmttiEbAp4-Pg-h0CHTXHLzElcJhERbocoeZoy3XjyXz6I4vkodsBlSRmeSzKyC68ZQGzYlh9ltezSZDFrLhGl_lCHkcokRLDrmgA"/>
+<!-- Expressive Gradient Overlay to blend with brand colors -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-highest via-transparent to-transparent"></div>
+</div>
+<!-- Text Content -->
+<div class="px-margin-mobile pt-8 pb-6 flex flex-col items-center text-center gap-4">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary-fixed-dim">
+        Your screen, your business.
+      </h1>
+<p class="font-body-lg text-body-lg text-secondary-fixed-dim max-w-[320px]">
+        Prevent shoulder surfing in public spaces with an adjustable privacy mask.
+      </p>
+</div>
+<!-- Bottom Actions & Pagination -->
+<div class="px-margin-mobile pb-safe pb-8 pt-4 flex flex-col items-center gap-8 w-full">
+<!-- Pagination Dots -->
+<div class="flex gap-2 items-center">
+<!-- Active Dot -->
+<div class="h-2 w-8 bg-primary-fixed-dim rounded-full transition-all duration-300"></div>
+<!-- Inactive Dots -->
+<div class="h-2 w-2 bg-surface-variant rounded-full transition-all duration-300"></div>
+<div class="h-2 w-2 bg-surface-variant rounded-full transition-all duration-300"></div>
+</div>
+<!-- Expressive Pill Button -->
+<button class="btn-squish w-full h-14 bg-primary text-on-primary rounded-full flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-4 focus:ring-primary-container">
+<span class="font-label-lg text-label-lg uppercase tracking-wider">Next</span>
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+</div>
+</main>
+</body></html>

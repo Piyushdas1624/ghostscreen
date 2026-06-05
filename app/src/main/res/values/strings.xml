@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GhostScreen</string>
+    <string name="accessibility_service_description">GhostScreen uses this service to detect when your selected apps are opened, allowing it to instantly draw the privacy overlay and block shoulder-surfers.</string>
+    <string name="tile_label">GhostScreen</string>
+</resources>
