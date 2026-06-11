@@ -1,7 +1,7 @@
 # GhostScreen Structured Database Schema
 
-> Last updated: 2026-05-25 16:18 UTC  
-> Updated during: Performance Fix — Async EncryptedSharedPreferences
+> Last updated: 2026-06-05 23:58 UTC  
+> Updated during: Smart Mask Updates — System UI & Keyboard Protection + Blur Fixes
 
 ---
 
@@ -65,3 +65,4 @@
     * `onboarding_completed` (Boolean, default: `false`) — Whether the user has finished onboarding
     * `cutout_y_pct` (Float, range: 0.0–1.0, default: `0.5`) — Center Y position of the viewing window as percentage of screen height
     * `cutout_height_pct` (Float, range: 0.05–0.9, default: `0.25`) — Height of the viewing window as percentage of screen height
+    * `disclaimer_understood` (Boolean, default: `false`) — Whether the user has seen and understood the Smart Mask System UI & keyboard disclaimer

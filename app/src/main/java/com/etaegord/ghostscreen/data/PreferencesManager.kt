@@ -37,6 +37,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_MIGRATED = "encrypted_prefs_migrated"
 
         private const val KEY_ARMED = "armed"
+        private const val KEY_MANUAL_OVERRIDE = "manual_override_active"
         private const val KEY_TRANSPARENCY = "transparency"
         private const val KEY_COLOR = "color"
         private const val KEY_LAUNCH_ON_BOOT = "launch_on_boot"
@@ -49,6 +50,7 @@ class PreferencesManager(context: Context) {
 
         private const val KEY_BLUR_ENABLED = "blur_enabled"
         private const val KEY_BLUR_RADIUS = "blur_radius"
+        private const val KEY_DISCLAIMER_UNDERSTOOD = "disclaimer_understood"
     }
 
     init {
@@ -107,6 +109,10 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_ARMED, false)
         set(value) = edit { putBoolean(KEY_ARMED, value) }
 
+    var isManualOverrideActive: Boolean
+        get() = prefs.getBoolean(KEY_MANUAL_OVERRIDE, false)
+        set(value) = edit { putBoolean(KEY_MANUAL_OVERRIDE, value) }
+
     var transparency: Int
         get() = prefs.getInt(KEY_TRANSPARENCY, 75)
         set(value) = edit { putInt(KEY_TRANSPARENCY, value.coerceIn(0, 100)) }
@@ -142,6 +148,10 @@ class PreferencesManager(context: Context) {
     var blurRadius: Int
         get() = prefs.getInt(KEY_BLUR_RADIUS, 10)
         set(value) = edit { putInt(KEY_BLUR_RADIUS, value.coerceIn(0, 25)) }
+
+    var isSmartMaskDisclaimerUnderstood: Boolean
+        get() = prefs.getBoolean(KEY_DISCLAIMER_UNDERSTOOD, false)
+        set(value) = edit { putBoolean(KEY_DISCLAIMER_UNDERSTOOD, value) }
 
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         plainPrefs.registerOnSharedPreferenceChangeListener(listener)

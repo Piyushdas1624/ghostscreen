@@ -43,6 +43,11 @@ class GhostScreenOverlay(
 
     // ── Windows ─────────────────────────────────────────────────────
     private var maskView: MaskView? = null
+    private var maskTopView: MaskWindowView? = null
+    private var maskBotView: MaskWindowView? = null
+    private var maskLeftView: MaskWindowView? = null
+    private var maskRightView: MaskWindowView? = null
+    
     private var stripTopView: StripView? = null
     private var stripBotView: StripView? = null
     // Box mode: 4 corner handles + opacity drop + exit (always last)
@@ -54,9 +59,37 @@ class GhostScreenOverlay(
     private var isShowing = false
 
     // ── Opacity ─────────────────────────────────────────────────────
+    private var noiseShader: android.graphics.BitmapShader? = null
+    private fun getNoiseShader(): android.graphics.BitmapShader {
+        if (noiseShader != null) return noiseShader!!
+        val w = 64
+        val h = 64
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(w * h)
+        val random = java.util.Random()
+        for (i in pixels.indices) {
+            val v = 200 + random.nextInt(56)
+            pixels[i] = android.graphics.Color.argb(255, v, v, v)
+        }
+        bmp.setPixels(pixels, 0, w, 0, 0, w, h)
+        noiseShader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        return noiseShader!!
+    }
+
     private var opacity: Int
         get() = preferencesManager.transparency
-        set(v) { preferencesManager.transparency = v.coerceIn(0, 100); maskView?.invalidate() }
+        set(v) {
+            preferencesManager.transparency = v.coerceIn(0, 100)
+            invalidateMasks()
+        }
+
+    private fun invalidateMasks() {
+        maskTopView?.invalidate()
+        maskBotView?.invalidate()
+        maskLeftView?.invalidate()
+        maskRightView?.invalidate()
+        maskView?.invalidate()
+    }
 
     // ── SPLIT state ─────────────────────────────────────────────────
     private var stripTopY = 0f
@@ -106,6 +139,7 @@ class GhostScreenOverlay(
         stripBotY = screenH * 0.65f
 
         addMask()
+        addMaskWindows()
         addSplitWindows()
         addExitButton()
         isShowing = true; overlayMode = Mode.SPLIT
@@ -116,6 +150,7 @@ class GhostScreenOverlay(
         if (!isShowing) return
         removeSplitWindows()
         removeBoxWindows()
+        removeMaskWindows()
         maskView?.let { safeRemove(it) }; maskView = null
         exitBtnView?.let { safeRemove(it) }; exitBtnView = null
         isShowing = false
@@ -152,6 +187,26 @@ class GhostScreenOverlay(
             it.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
     }
 
+    private fun maskParams(x: Int, y: Int, w: Int, h: Int) = WindowManager.LayoutParams(
+        w.coerceAtLeast(1), h.coerceAtLeast(1),
+        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        PixelFormat.TRANSLUCENT
+    ).also {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+            it.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        it.gravity = Gravity.TOP or Gravity.START
+        it.x = x
+        it.y = y
+        if (preferencesManager.isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            it.flags = it.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+            it.blurBehindRadius = (preferencesManager.blurRadius * 3).coerceIn(1, 100)
+        }
+    }
+
     private fun activeParams(w: Int, h: Int) = WindowManager.LayoutParams(
         w, h,
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -172,6 +227,44 @@ class GhostScreenOverlay(
     // ══════════════════════════════════════════════════════════════════
     private fun addMask() {
         maskView = MaskView(context); safeAdd(maskView!!, passiveParams())
+    }
+
+    private fun addMaskWindows() {
+        if (overlayMode == Mode.SPLIT) {
+            val th = stripTopY.toInt()
+            maskTopView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(0, 0, screenW, th))
+            }
+            val bh = (screenH - stripBotY).toInt()
+            maskBotView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(0, stripBotY.toInt(), screenW, bh))
+            }
+        } else {
+            val th = boxTop.toInt()
+            maskTopView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(0, 0, screenW, th))
+            }
+            val bh = (screenH - boxBottom).toInt()
+            maskBotView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(0, boxBottom.toInt(), screenW, bh))
+            }
+            val lh = (boxBottom - boxTop).toInt()
+            val lw = boxLeft.toInt()
+            maskLeftView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(0, boxTop.toInt(), lw, lh))
+            }
+            val rw = (screenW - boxRight).toInt()
+            maskRightView = MaskWindowView(context).also {
+                safeAdd(it, maskParams(boxRight.toInt(), boxTop.toInt(), rw, lh))
+            }
+        }
+    }
+
+    private fun removeMaskWindows() {
+        maskTopView?.let { safeRemove(it) }; maskTopView = null
+        maskBotView?.let { safeRemove(it) }; maskBotView = null
+        maskLeftView?.let { safeRemove(it) }; maskLeftView = null
+        maskRightView?.let { safeRemove(it) }; maskRightView = null
     }
 
     private fun addSplitWindows() {
@@ -211,8 +304,6 @@ class GhostScreenOverlay(
                 y = (boxBottom + 10 * density).toInt().coerceAtMost(screenH - dropSz - extraH)
             })
         }
-        exitBtnView?.let { safeRemove(it) }; exitBtnView = null
-        addExitButton()
         scheduleDim(BOX_DIM_MS)
     }
 
@@ -236,6 +327,20 @@ class GhostScreenOverlay(
         val sh = (STRIP_H_DP * density).toInt()
         stripTopView?.let { (it.layoutParams as WindowManager.LayoutParams).y = (stripTopY - sh / 2).toInt(); safeUpdate(it) }
         stripBotView?.let { (it.layoutParams as WindowManager.LayoutParams).y = (stripBotY - sh / 2).toInt(); safeUpdate(it) }
+        
+        maskTopView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.height = stripTopY.toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
+        maskBotView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.y = stripBotY.toInt()
+            p.height = (screenH - stripBotY).toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
         maskView?.invalidate()
     }
 
@@ -260,6 +365,37 @@ class GhostScreenOverlay(
             p.y = (boxBottom + 10 * density).toInt().coerceAtMost(screenH - it.height)
             safeUpdate(it)
         }
+        
+        maskTopView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.height = boxTop.toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
+        maskBotView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.y = boxBottom.toInt()
+            p.height = (screenH - boxBottom).toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
+        maskLeftView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.y = boxTop.toInt()
+            p.width = boxLeft.toInt().coerceAtLeast(1)
+            p.height = (boxBottom - boxTop).toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
+        maskRightView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.x = boxRight.toInt()
+            p.y = boxTop.toInt()
+            p.width = (screenW - boxRight).toInt().coerceAtLeast(1)
+            p.height = (boxBottom - boxTop).toInt().coerceAtLeast(1)
+            safeUpdate(it)
+            it.invalidate()
+        }
         maskView?.invalidate()
     }
 
@@ -276,7 +412,13 @@ class GhostScreenOverlay(
         overlayMode = Mode.BOX
         boxLeft = screenW * 0.08f; boxTop = stripTopY
         boxRight = screenW * 0.92f; boxBottom = stripBotY
-        removeSplitWindows(); addBoxWindows(); maskView?.invalidate()
+        removeSplitWindows()
+        removeMaskWindows()
+        addMaskWindows()
+        addBoxWindows()
+        exitBtnView?.let { safeRemove(it) }; exitBtnView = null
+        addExitButton()
+        maskView?.invalidate()
     }
 
     private fun enterSplitMode() {
@@ -286,6 +428,8 @@ class GhostScreenOverlay(
         stripTopY = boxTop
         stripBotY = (boxBottom).coerceAtLeast(boxTop + MERGE_GAP_DP * density * 4)
         removeBoxWindows()
+        removeMaskWindows()
+        addMaskWindows()
         addSplitWindows()
         exitBtnView?.let { safeRemove(it) }; exitBtnView = null
         addExitButton()
@@ -364,41 +508,79 @@ class GhostScreenOverlay(
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // Drag Optimization
+    // ══════════════════════════════════════════════════════════════════
+    private var isDraggingMasksHidden = false
+
+    private fun setMaskWindowsVisible(visible: Boolean) {
+        if (isDraggingMasksHidden == !visible) return
+        isDraggingMasksHidden = !visible
+        if (visible) {
+            if (overlayMode == Mode.SPLIT) updateStripLayouts() else updateCornerPositions()
+            maskTopView?.visibility = View.VISIBLE
+            maskBotView?.visibility = View.VISIBLE
+            maskLeftView?.visibility = View.VISIBLE
+            maskRightView?.visibility = View.VISIBLE
+        } else {
+            maskTopView?.visibility = View.GONE
+            maskBotView?.visibility = View.GONE
+            maskLeftView?.visibility = View.GONE
+            maskRightView?.visibility = View.GONE
+        }
+        maskView?.invalidate()
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // VIEW 1 — Fullscreen passive mask
     // Draws: dark mask + clear window + box border/corners (in box mode)
     // ══════════════════════════════════════════════════════════════════
+    private inner class MaskWindowView(ctx: Context) : View(ctx) {
+        private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+
+            override fun onDraw(canvas: Canvas) {
+                var alpha = ((opacity / 100f) * 255).toInt().coerceIn(0, 255)
+                val isBlur = preferencesManager.isBlurEnabled
+                if (isBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    alpha = (alpha * 0.4f).toInt()
+                }
+                val rawColor = try { Color.parseColor(preferencesManager.color) } catch (_: Exception) { Color.BLACK }
+                fillP.color = rawColor
+                fillP.alpha = alpha
+                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), fillP)
+                
+                if (isBlur && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    val noiseP = Paint()
+                    noiseP.shader = getNoiseShader()
+                    noiseP.alpha = ((opacity / 100f) * 80).toInt().coerceIn(0, 80)
+                    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), noiseP)
+                }
+            }
+    }
+
     private inner class MaskView(ctx: Context) : View(ctx) {
-        private val fillP  = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-        private val clearP = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
-        private val frostP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val edgeP  = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f * density }
         private val dotP   = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        private val fillP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         init { setLayerType(LAYER_TYPE_HARDWARE, null) }
 
         override fun onDraw(canvas: Canvas) {
-            val alpha = ((opacity / 100f) * 255).toInt().coerceIn(0, 255)
-            val blurEnabled = preferencesManager.isBlurEnabled
-            val rawColor = try { Color.parseColor(preferencesManager.color) } catch (_: Exception) { Color.BLACK }
+            if (isDraggingMasksHidden) {
+                var alpha = ((opacity / 100f) * 255).toInt().coerceIn(0, 255)
+                if (preferencesManager.isBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    alpha = (alpha * 0.4f).toInt()
+                }
+                val rawColor = try { Color.parseColor(preferencesManager.color) } catch (_: Exception) { Color.BLACK }
+                fillP.color = rawColor
+                fillP.alpha = alpha
 
-            // Fill mask
-            fillP.color = rawColor; fillP.alpha = alpha
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), fillP)
-
-            // Window cutout or frost
-            val winRect = when (overlayMode) {
-                Mode.SPLIT -> { val gap = stripBotY - stripTopY; if (gap > 0) RectF(0f, stripTopY, width.toFloat(), stripBotY) else null }
-                Mode.BOX   -> RectF(boxLeft, boxTop, boxRight, boxBottom)
-            }
-            if (winRect != null) {
-                if (blurEnabled) {
-                    // Frosted glass — partial opacity in window instead of full clear
-                    frostP.color = Color.WHITE
-                    frostP.alpha = ((opacity / 100f) * 180 + 30).toInt().coerceIn(40, 220)
-                    frostP.maskFilter = BlurMaskFilter((opacity / 100f * 16 + 4) * density, BlurMaskFilter.Blur.NORMAL)
-                    canvas.drawRect(winRect, frostP)
-                    frostP.maskFilter = null
+                if (overlayMode == Mode.SPLIT) {
+                    canvas.drawRect(0f, 0f, width.toFloat(), stripTopY, fillP)
+                    canvas.drawRect(0f, stripBotY, width.toFloat(), height.toFloat(), fillP)
                 } else {
-                    canvas.drawRect(winRect, clearP)
+                    canvas.drawRect(0f, 0f, width.toFloat(), boxTop, fillP)
+                    canvas.drawRect(0f, boxBottom, width.toFloat(), height.toFloat(), fillP)
+                    canvas.drawRect(0f, boxTop, boxLeft, boxBottom, fillP)
+                    canvas.drawRect(boxRight, boxTop, width.toFloat(), boxBottom, fillP)
                 }
             }
 
@@ -445,11 +627,19 @@ class GhostScreenOverlay(
             val w = width.toFloat(); val h = height.toFloat(); val cy = h / 2f
             val merged = (stripBotY - stripTopY) < MERGE_GAP_DP * density
             val th = 3f * density
+            val gap = 16f * density
+            
             trackBg.color = Color.WHITE; trackBg.alpha = (alpha_ * 0.18f).toInt()
-            canvas.drawRoundRect(0f, cy - th / 2, w, cy + th / 2, th / 2, th / 2, trackBg)
-            val opX = w * (opacity / 100f)
+            canvas.drawRoundRect(gap, cy - th / 2, w - gap, cy + th / 2, th / 2, th / 2, trackBg)
+            
+            val minX = gap + EYE_R_DP * density
+            val maxX = w - gap - EYE_R_DP * density
+            val range = maxX - minX
+            val eyeX = minX + (opacity / 100f) * range
+
             trackFg.alpha = alpha_
-            canvas.drawRoundRect(0f, cy - th / 2, opX, cy + th / 2, th / 2, th / 2, trackFg)
+            canvas.drawRoundRect(gap, cy - th / 2, eyeX, cy + th / 2, th / 2, th / 2, trackFg)
+            
             val aArr = 7 * density
             arrow_.alpha = (alpha_ * 0.30f).toInt()
             canvas.drawLine(14 * density, cy, 14 * density + aArr, cy - aArr, arrow_)
@@ -457,7 +647,7 @@ class GhostScreenOverlay(
             val rx = w - 14 * density
             canvas.drawLine(rx, cy, rx - aArr, cy - aArr, arrow_)
             canvas.drawLine(rx, cy, rx - aArr, cy + aArr, arrow_)
-            val eyeX = opX.coerceIn(EYE_R_DP * density, w - EYE_R_DP * density)
+            
             drawEye(canvas, eyeX, cy, merged)
         }
 
@@ -494,11 +684,12 @@ class GhostScreenOverlay(
                 canvas.drawPath(path, eyeStr)
                 eyeFill.color = Color.WHITE; eyeFill.alpha = alpha_
                 canvas.drawCircle(cx, cy, r * 0.20f, eyeFill)
-                // Opacity % — drawn below pupil with 6dp gap so it never clips outside the pill
-                tPaint.textSize = 7.5f * density; tPaint.color = Color.WHITE
-                tPaint.alpha = (alpha_ * 0.80f).toInt()
-                // Pill inner space: pill height = r*1.24, pupil at cy, text at cy + r*0.42 (still inside pill)
-                canvas.drawText("${opacity}%", cx, cy + r * 0.46f, tPaint)
+                // Opacity % — drawn below the pill entirely so it doesn't overlap the eye during horizontal dragging
+                tPaint.textSize = 10f * density; tPaint.color = Color.WHITE
+                tPaint.alpha = (alpha_ * 0.90f).toInt()
+                // Text baseline is below the pill: pill ends at cy + r * 0.62f.
+                // 5dp gap below the pill before the text starts.
+                canvas.drawText("${opacity}%", cx, cy + r * 0.62f + 5 * density + tPaint.textSize * 0.8f, tPaint)
                 // Chevrons outside pill (above/below)
                 val chP = Paint(arrow_).apply { alpha = (alpha_ * 0.35f).toInt() }
                 val cs = 5 * density; val offY = r * 0.72f + 4 * density
@@ -519,13 +710,31 @@ class GhostScreenOverlay(
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = abs(e.x - pressStartX); val dy = abs(e.rawY - pressStartRawY)
-                    if (!isDragging && (dx > 5 * density || dy > 5 * density)) { isDragging = true; mainHandler.removeCallbacks(longRun) }
+                    if (!isDragging && (dx > 5 * density || dy > 5 * density)) { 
+                        isDragging = true; mainHandler.removeCallbacks(longRun)
+                        if (dy > dx) setMaskWindowsVisible(false) 
+                    }
                     if (isDragging) {
                         if (dy > dx) {
                             if (wasMerged) { stripTopY = screenH * 0.35f; stripBotY = screenH * 0.65f; wasMerged = false }
-                            else moveStrip(e.rawY - lastRawY)
+                            else {
+                                val sh = height.toFloat(); val mg = MERGE_GAP_DP * density
+                                val dyRaw = e.rawY - lastRawY
+                                if (isTop) stripTopY = (stripTopY + dyRaw).coerceIn(sh / 2, stripBotY - mg)
+                                else stripBotY = (stripBotY + dyRaw).coerceIn(stripTopY + mg, screenH - sh / 2)
+                                maskView?.invalidate()
+                                val ypos = if (isTop) stripTopY else stripBotY
+                                (layoutParams as WindowManager.LayoutParams).y = (ypos - sh / 2).toInt()
+                                safeUpdate(this@StripView)
+                            }
                         } else {
-                            opacity = ((e.x / width.toFloat()) * 100).toInt().coerceIn(0, 100)
+                            val gap = 16f * density
+                            val minX = gap + EYE_R_DP * density
+                            val maxX = width - gap - EYE_R_DP * density
+                            val range = maxX - minX
+                            if (range > 0) {
+                                opacity = (((e.x - minX) / range) * 100).toInt().coerceIn(0, 100)
+                            }
                             stripTopView?.invalidate(); stripBotView?.invalidate()
                         }
                         lastRawY = e.rawY
@@ -533,17 +742,11 @@ class GhostScreenOverlay(
                     return true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (isDragging) setMaskWindowsVisible(true)
                     mainHandler.removeCallbacks(longRun); scheduleIdle(); return true
                 }
             }
             return false
-        }
-
-        private fun moveStrip(dy: Float) {
-            val sh = height.toFloat(); val mg = MERGE_GAP_DP * density
-            if (isTop) stripTopY = (stripTopY + dy).coerceIn(sh / 2, stripBotY - mg)
-            else stripBotY = (stripBotY + dy).coerceIn(stripTopY + mg, screenH - sh / 2)
-            updateStripLayouts()
         }
     }
 
@@ -592,7 +795,22 @@ class GhostScreenOverlay(
                         if (!boxEditActive) { boxEditActive = true; bump() }
                     }
                     if (dragging && boxEditActive) {
-                        applyBoxDelta(cornerIdx, dx, dy)
+                        val m = MIN_BOX_DP * density
+                        when (cornerIdx) {
+                            0 -> { boxLeft = min(boxLeft + dx, boxRight - m); boxTop = min(boxTop + dy, boxBottom - m) }
+                            1 -> { boxRight = max(boxRight + dx, boxLeft + m); boxTop = min(boxTop + dy, boxBottom - m) }
+                            2 -> { boxLeft = min(boxLeft + dx, boxRight - m); boxBottom = max(boxBottom + dy, boxTop + m) }
+                            3 -> { boxRight = max(boxRight + dx, boxLeft + m); boxBottom = max(boxBottom + dy, boxTop + m)}
+                        }
+                        val bw = (boxRight - boxLeft).coerceAtLeast(m)
+                        val bh = (boxBottom - boxTop).coerceAtLeast(m)
+                        boxLeft = boxLeft.coerceIn(0f, (screenW - bw).coerceAtLeast(0f))
+                        boxTop  = boxTop.coerceIn(0f, (screenH - bh).coerceAtLeast(0f))
+                        boxRight = boxLeft + bw; boxBottom = boxTop + bh
+                        
+                        val csz = (CORNER_DP * density).toInt()
+                        updateCornerPositions()
+                        maskView?.invalidate()
                         scheduleEditDim()
                     }
                     lx = e.rawX; ly = e.rawY; return true
@@ -743,7 +961,17 @@ class GhostScreenOverlay(
                     }
                     lrx = e.rawX; lry = e.rawY; return true
                 }
-                MotionEvent.ACTION_UP -> { if (!dragging) { tick(); hide() } else { btnAlpha = 95; invalidate() }; return true }
+                MotionEvent.ACTION_UP -> { 
+                    if (!dragging) { 
+                        tick()
+                        preferencesManager.isManualOverrideActive = false
+                        context.sendBroadcast(android.content.Intent("com.etaegord.ghostscreen.EVALUATE_STATE"))
+                        hide() 
+                    } else { 
+                        btnAlpha = 95; invalidate() 
+                    }
+                    return true 
+                }
             }
             return false
         }

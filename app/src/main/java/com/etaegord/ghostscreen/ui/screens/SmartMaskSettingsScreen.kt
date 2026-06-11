@@ -14,7 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.etaegord.ghostscreen.data.AppDatabase
+import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.data.ProtectedApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,6 +45,7 @@ data class AppItemInfo(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmartMaskSettingsScreen(
+    preferencesManager: PreferencesManager,
     db: AppDatabase,
     onNavigateBack: () -> Unit
 ) {
@@ -54,6 +58,100 @@ fun SmartMaskSettingsScreen(
     var appList by remember { mutableStateOf<List<AppItemInfo>>(emptyList()) }
     val protectedApps by db.appDao().getAllProtectedApps().collectAsState(initial = emptyList())
     val protectedPackages = remember(protectedApps) { protectedApps.map { it.packageName }.toSet() }
+
+    var showDisclaimerDialog by remember {
+        mutableStateOf(!preferencesManager.isSmartMaskDisclaimerUnderstood)
+    }
+
+    if (showDisclaimerDialog) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "System UI & Keyboard Guide",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "To keep your screen fully hidden, protect your keyboard and System UI (for status bar / notifications).",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    item {
+                        Text(
+                            text = "💡 Why is this needed?",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "• Notification Shade: Masking System UI blocks snooping if notifications are pulled down accidentally.\n" +
+                                   "• Keyboard Swiping: Masking Gboard keeps the privacy mask active and secure while typing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        Text(
+                            text = "🔄 Conditional Masking (Smart trigger)",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "The keyboard and notification shade only trigger masking if you are currently using a masked app (e.g. Messages). They remain normal on apps you did not mask (e.g. WhatsApp).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    item {
+                        Text(
+                            text = "📱 OEM Compatibility:",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "• Google / Moto / Realme / Vivo / Samsung: com.android.systemui\n" +
+                                   "• Xiaomi / MIUI / HyperOS: com.miui.systemui\n" +
+                                   "• Infinix / Tecno: com.transsion.systemui\n" +
+                                   "• Keyboards: Gboard (com.google.android.inputmethod.latin) or Samsung Keyboard (com.samsung.android.honeyboard).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        preferencesManager.isSmartMaskDisclaimerUnderstood = true
+                        showDisclaimerDialog = false
+                    }
+                ) {
+                    Text("Understood")
+                }
+            }
+        )
+    }
 
     // Load installed launcher applications in background
     LaunchedEffect(Unit) {
@@ -89,9 +187,41 @@ fun SmartMaskSettingsScreen(
                 }
 
                 AppItemInfo(packageName, appName, icon, isSuggested)
+            }.toMutableList()
+
+            // Predefined System UI and Keyboard packages for suggestions
+            val commonPackages = listOf(
+                "com.android.systemui" to "System UI (Standard/Samsung/Google/Moto/OPPO/Vivo)",
+                "com.miui.systemui" to "System UI (Xiaomi/Redmi/POCO/HyperOS)",
+                "com.transsion.systemui" to "System UI (Infinix/Tecno)",
+                "com.huawei.systemui" to "System UI (Huawei/Honor)",
+                "com.google.android.inputmethod.latin" to "Gboard (Google Keyboard)",
+                "com.samsung.android.honeyboard" to "Samsung Keyboard",
+                "com.touchtype.swiftkey" to "SwiftKey Keyboard",
+                "com.kika.keyboard.emoji.teclado" to "Kika Keyboard (Infinix/Tecno)",
+                "com.baidu.input_mi" to "Baidu Input (Xiaomi)"
+            )
+
+            commonPackages.forEach { (pkg, name) ->
+                // Avoid duplicates if already loaded via launcher
+                if (loadedApps.none { it.packageName == pkg }) {
+                    try {
+                        val appInfo = pm.getApplicationInfo(pkg, 0)
+                        val icon = pm.getApplicationIcon(appInfo)
+                        loadedApps.add(
+                            AppItemInfo(
+                                packageName = pkg,
+                                appName = name,
+                                icon = icon,
+                                isSuggested = true
+                            )
+                        )
+                    } catch (_: Exception) {}
+                }
             }
+
             // Sort: Alphabetical app name
-            .sortedBy { it.appName }
+            loadedApps.sortBy { it.appName }
 
             withContext(Dispatchers.Main) {
                 appList = loadedApps
@@ -100,12 +230,21 @@ fun SmartMaskSettingsScreen(
         }
     }
 
-    // Filter app list based on search query
-    val filteredList = remember(appList, searchQuery) {
+    var filterMode by remember { mutableStateOf("All") } // "All", "Enabled", "Disabled"
+
+    // Filter app list based on search query and filter mode
+    val filteredList = remember(appList, searchQuery, filterMode, protectedPackages) {
+        var list = appList
+        if (filterMode == "Enabled") {
+            list = list.filter { protectedPackages.contains(it.packageName) }
+        } else if (filterMode == "Disabled") {
+            list = list.filter { !protectedPackages.contains(it.packageName) }
+        }
+        
         if (searchQuery.isBlank()) {
-            appList
+            list
         } else {
-            appList.filter { 
+            list.filter { 
                 it.appName.contains(searchQuery, ignoreCase = true) || 
                 it.packageName.contains(searchQuery, ignoreCase = true)
             }
@@ -132,6 +271,15 @@ fun SmartMaskSettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
                             contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDisclaimerDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "System UI & Keyboard Info",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -165,18 +313,38 @@ fun SmartMaskSettingsScreen(
                 },
                 leadingIcon = {
                     Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
-                shape = RoundedCornerShape(28.dp),
-                singleLine = true,
+                shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                )
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                singleLine = true
             )
+            
+            // Filter Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("All", "Enabled", "Disabled").forEach { mode ->
+                    FilterChip(
+                        selected = filterMode == mode,
+                        onClick = { filterMode = mode },
+                        label = { Text(mode) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+            }
 
             if (isLoading) {
                 Box(

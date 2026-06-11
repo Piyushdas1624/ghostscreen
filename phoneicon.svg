@@ -1,0 +1,78 @@
+<svg id="ghost-screen-svg" class="w-full max-w-[340px] h-auto drop-shadow-[0_20px_35px_rgba(0,0,0,0.6)]" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Screen Background Gradient -->
+            <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00beff"></stop>
+              <stop offset="100%" stop-color="#0080ff"></stop>
+            </linearGradient>
+
+            <!-- Ghost Premium Soft Gradient -->
+            <linearGradient id="ghostGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff"></stop>
+              <stop offset="100%" stop-color="#e2eaf0"></stop>
+            </linearGradient>
+
+            <!-- Clip-Path for the Mouth inner tongue -->
+            <clipPath id="mouthClip">
+              <ellipse cx="205" cy="155" rx="16" ry="22"></ellipse>
+            </clipPath>
+          </defs>
+
+          <!-- Side Hardware Buttons (Rendered behind phone body) -->
+          <!-- Volume Up Key -->
+          <rect id="svg-btn-vol1" x="126" y="125" width="14" height="35" rx="6" fill="#2c3c45" stroke="#000000" stroke-width="16" stroke-linejoin="round"></rect>
+          <!-- Volume Down Key -->
+          <rect id="svg-btn-vol2" x="126" y="175" width="14" height="35" rx="6" fill="#2c3c45" stroke="#000000" stroke-width="16" stroke-linejoin="round"></rect>
+          <!-- Power Button -->
+          <rect id="svg-btn-power" x="372" y="150" width="14" height="50" rx="6" fill="#2c3c45" stroke="#000000" stroke-width="16" stroke-linejoin="round"></rect>
+
+          <!-- Phone Outer Chassis / Rounded Body Frame -->
+          <rect id="svg-phone-body" x="140" y="30" width="232" height="452" rx="42" fill="#354954" stroke="#000000" stroke-width="16" stroke-linejoin="round"></rect>
+
+          <!-- Blue Mobile Screen Interior (Nested beautifully inside bezel) -->
+          <rect id="svg-screen" x="158" y="76" width="196" height="340" rx="20" fill="url(#screenGrad)" stroke="#000000" stroke-width="16" stroke-linejoin="round"></rect>
+
+          <!-- Top Speaker / Earpiece Grill -->
+          <line id="svg-speaker" x1="226" y1="53" x2="286" y2="53" stroke="#000000" stroke-width="12" stroke-linecap="round"></line>
+
+          <!-- Retro Circular Home Button (Adds maximum cartoony charm!) -->
+          <circle id="svg-home-button" cx="256" cy="450" r="14" fill="#2c3c45" stroke="#000000" stroke-width="10"></circle>
+
+          <!-- Screen Glares (Angled highlights, top-right of mobile display area) -->
+          <line x1="312" y1="100" x2="327" y2="115" stroke="#ffffff" stroke-width="12" stroke-linecap="round" opacity="0.4" class="animate-glow"></line>
+          <line x1="332" y1="120" x2="346" y2="134" stroke="#ffffff" stroke-width="12" stroke-linecap="round" opacity="0.4" class="animate-glow"></line>
+
+          <!-- Spooky/Motion Swoosh lines sweeping behind the ghost -->
+          <g id="svg-motion-trails">
+            <path d="M 230 325 C 280 295, 305 230, 305 160" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round"></path>
+            <path d="M 270 320 C 315 290, 335 240, 335 180" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round"></path>
+          </g>
+
+          <!-- Complete Ghost Character Layer bursting out from the left screen boundary -->
+          <g id="ghost-character-group" class="animate-float">
+            <!-- Ghost Main Body Path (Precisely hand-crafted curves replicating image_d78742.png) -->
+            <path id="svg-ghost-body" d="M 115 255 C 80 255, 15 225, 15 195 C 15 170, 70 170, 115 160 C 130 120, 125 50, 195 40 C 255 30, 285 80, 285 140 C 285 185, 275 220, 255 260 C 240 290, 205 320, 185 320 C 170 320, 160 300, 155 260 C 150 295, 140 325, 130 325 C 120 325, 115 290, 115 255 Z" fill="url(#ghostGrad)" stroke="#000000" stroke-width="16" stroke-linejoin="round"></path>
+
+            <!-- Ghost Soft Shadow Accent on Left Body -->
+            <path d="M 115 255 C 80 255, 15 225, 15 195 C 15 170, 70 170, 115 160 C 130 120, 125 50, 195 40 C 185 55, 175 110, 140 165 C 105 210, 110 245, 115 255 Z" fill="#000000" opacity="0.05"></path>
+
+            <!-- Adorable Ghost Cheeks / Blush -->
+            <ellipse cx="162" cy="132" rx="10" ry="6" fill="#ff7675" opacity="0.6"></ellipse>
+            <ellipse cx="248" cy="132" rx="10" ry="6" fill="#ff7675" opacity="0.6"></ellipse>
+
+            <!-- Left Eye (Cartoon Oval) -->
+            <ellipse cx="180" cy="115" rx="14" ry="18" fill="#1d272c" stroke="#000000" stroke-width="8"></ellipse>
+            <!-- Left Eye Shine -->
+            <circle cx="184" cy="110" r="4" fill="#ffffff"></circle>
+
+            <!-- Right Eye (Cartoon Oval) -->
+            <ellipse cx="230" cy="115" rx="14" ry="18" fill="#1d272c" stroke="#000000" stroke-width="8"></ellipse>
+            <!-- Right Eye Shine -->
+            <circle cx="234" cy="110" r="4" fill="#ffffff"></circle>
+
+            <!-- Surprised Mouth with Inner Tongue -->
+            <ellipse cx="205" cy="155" rx="16" ry="22" fill="#1d272c" stroke="#000000" stroke-width="8"></ellipse>
+            <!-- Sweet Tongue Overlay inside Mouth -->
+            <ellipse cx="205" cy="168" rx="11" ry="8" fill="#ff7675" clip-path="url(#mouthClip)"></ellipse>
+          </g>
+        </svg>

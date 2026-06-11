@@ -23,11 +23,56 @@
             android:exported="true"
             android:theme="@style/Theme.Ghostscreen"
             android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity-alias
+            android:name=".ui.MainAliasBlue"
+            android:targetActivity=".ui.MainActivity"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_ghost_icon_blue"
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.MainAliasRed"
+            android:targetActivity=".ui.MainActivity"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_ghost_icon_red"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.MainAliasGreen"
+            android:targetActivity=".ui.MainActivity"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_ghost_icon_green"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.MainAliasPurple"
+            android:targetActivity=".ui.MainActivity"
+            android:label="@string/app_name"
+            android:icon="@drawable/ic_ghost_icon_purple"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".service.GhostScreenAccessibilityService"
@@ -60,6 +105,69 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+
+
+        <activity
+            android:name=".ui.ShortcutActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:label="Manual Mask"
+            android:icon="@drawable/ic_launcher_foreground"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity>
+
+        <activity-alias
+            android:name=".ui.ShortcutAliasBlue"
+            android:targetActivity=".ui.ShortcutActivity"
+            android:label="Manual Mask"
+            android:icon="@drawable/ic_ghost_icon_blue"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.ShortcutAliasRed"
+            android:targetActivity=".ui.ShortcutActivity"
+            android:label="Manual Mask"
+            android:icon="@drawable/ic_ghost_icon_red"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.ShortcutAliasGreen"
+            android:targetActivity=".ui.ShortcutActivity"
+            android:label="Manual Mask"
+            android:icon="@drawable/ic_ghost_icon_green"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.ShortcutAliasPurple"
+            android:targetActivity=".ui.ShortcutActivity"
+            android:label="Manual Mask"
+            android:icon="@drawable/ic_ghost_icon_purple"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
     </application>
 

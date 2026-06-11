@@ -1,7 +1,9 @@
 package com.etaegord.ghostscreen.ui
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
@@ -28,6 +30,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // setupRandomIconIfNeeded() removed to prevent app crash on first launch
 
         preferencesManager = PreferencesManager(applicationContext)
         db = AppDatabase.getDatabase(applicationContext)
@@ -52,6 +56,34 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun setupRandomIconIfNeeded(context: Context) {
+        val prefs = context.getSharedPreferences("GhostScreenPrefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("icon_randomized", false)) return
+        
+        val colors = listOf("Blue", "Red", "Green", "Purple")
+        val chosen = colors.random()
+        
+        val pm = context.packageManager
+        
+        for (c in colors) {
+            val state = if (c == chosen) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            pm.setComponentEnabledSetting(
+                ComponentName(context, "${context.packageName}.ui.MainAlias$c"),
+                state,
+                PackageManager.DONT_KILL_APP
+            )
+            pm.setComponentEnabledSetting(
+                ComponentName(context, "${context.packageName}.ui.ShortcutAlias$c"),
+                state,
+                PackageManager.DONT_KILL_APP
+            )
+        }
+        
+        prefs.edit().putBoolean("icon_randomized", true).apply()
+        
+        android.widget.Toast.makeText(context, "Icon randomized! Please reopen the app.", android.widget.Toast.LENGTH_LONG).show()
+    }
 }
 
 /** Determines the initial nav destination by checking prefs + live permission state. */
@@ -63,10 +95,10 @@ private fun computeStartDestination(
     val hasAccessibility = isMainAccessibilityEnabled(context)
 
     return when {
-        // Never finished onboarding → start from the welcome screen
-        !preferencesManager.isOnboardingCompleted -> "welcome"
-        // Onboarding done but permissions revoked (reinstall, manual revoke) → permission screen
-        !hasOverlay || !hasAccessibility -> "permission"
+        // Never finished onboarding → start from the onboarding flow
+        !preferencesManager.isOnboardingCompleted -> "onboarding"
+        // Onboarding done but permissions revoked (reinstall, manual revoke) → start onboarding at permission step
+        !hasOverlay || !hasAccessibility -> "onboarding"
         // All good → home
         else -> "home"
     }
@@ -95,24 +127,13 @@ fun GhostScreenApp(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Onboarding
-        composable("welcome") {
-            WelcomeScreen(onNext = { navController.navigate("permission") })
-        }
-
-        composable("permission") {
-            PermissionScreen(
-                onNext = { navController.navigate("all_set") },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("all_set") {
-            AllSetScreen(
+        // Onboarding Flow
+        composable("onboarding") {
+            OnboardingFlow(
                 onFinish = {
                     preferencesManager.isOnboardingCompleted = true
                     navController.navigate("home") {
-                        popUpTo("welcome") { inclusive = true }
+                        popUpTo("onboarding") { inclusive = true }
                     }
                 }
             )
@@ -140,6 +161,7 @@ fun GhostScreenApp(
 
         composable("smart_mask") {
             SmartMaskSettingsScreen(
+                preferencesManager = preferencesManager,
                 db = db,
                 onNavigateBack = { navController.popBackStack() }
             )
