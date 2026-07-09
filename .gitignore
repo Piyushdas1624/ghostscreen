@@ -1,15 +1,31 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/
 .DS_Store
+Thumbs.db
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# logs, dumps, dev scratch files
+*.log
+logcat.txt
+temp.txt
+nul
+detailed_list.txt
+repo_tree.txt
+prompt.md
+run_claude.bat
+
+# design sources kept locally, not tracked
+/mine stuffs/
+phoneicon.svg
+
+# agent/AI working files (tracked explicitly when intended)
+.claude/
+
+# kotlin daemon logs
+.kotlin/
