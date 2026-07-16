@@ -1,6 +1,5 @@
 package com.etaegord.ghostscreen.service
 
-import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -24,21 +23,19 @@ class GhostScreenTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        
-        // Toggle Manual Mode
-        val isActive = preferencesManager.isManualOverrideActive
-        preferencesManager.isManualOverrideActive = !isActive
 
-        // Notify the accessibility service to evaluate the new state
-        val intent = Intent("com.etaegord.ghostscreen.EVALUATE_STATE")
-        sendBroadcast(intent)
-        
+        // Toggle Manual Mode. The accessibility service's
+        // OnSharedPreferenceChangeListener reacts to this pref change and
+        // shows/hides the overlay — including a proper hide when turning off,
+        // even if the current foreground app is protected.
+        preferencesManager.isManualOverrideActive = !preferencesManager.isManualOverrideActive
+
         updateTileState()
     }
 
     private fun updateTileState() {
         val tile = qsTile ?: return
-        
+
         if (preferencesManager.isManualOverrideActive) {
             tile.state = Tile.STATE_ACTIVE
             tile.label = "GhostScreen (On)"

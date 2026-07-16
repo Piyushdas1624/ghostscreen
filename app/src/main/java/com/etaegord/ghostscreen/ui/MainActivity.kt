@@ -21,10 +21,21 @@ import androidx.navigation.compose.rememberNavController
 import com.etaegord.ghostscreen.data.AppDatabase
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
+import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import com.etaegord.ghostscreen.ui.screens.*
 import com.etaegord.ghostscreen.ui.theme.GhostScreenTheme
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        /**
+         * Debug-only: set by [com.etaegord.ghostscreen.dev.DeveloperActivity] to
+         * force a start destination. Accepted values: home / smart_mask / audit_log
+         * / settings / about. Ignored if absent (release builds never set it).
+         */
+        const val DEV_DEST_EXTRA = "dev.dest"
+    }
+
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var db: AppDatabase
 
@@ -38,8 +49,16 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        // Compute start destination here so we have a real Context (this)
-        val startDestination = computeStartDestination(preferencesManager, this)
+        // Dev-menu override (debug-only). DeveloperActivity sets EXTRA_DEST to
+        // jump straight to a screen without going through onboarding. In release
+        // builds DeveloperActivity does not exist, so this extra is never set.
+        val devDest = intent?.getStringExtra(DEV_DEST_EXTRA)
+        val startDestination = if (devDest != null) {
+            preferencesManager.isOnboardingCompleted = true
+            devDest
+        } else {
+            computeStartDestination(preferencesManager, this)
+        }
 
         setContent {
             GhostScreenTheme {
@@ -92,7 +111,7 @@ private fun computeStartDestination(
     context: Context
 ): String {
     val hasOverlay = Settings.canDrawOverlays(context)
-    val hasAccessibility = isMainAccessibilityEnabled(context)
+    val hasAccessibility = isGhostScreenAccessibilityEnabled(context)
 
     return when {
         // Never finished onboarding → start from the onboarding flow
@@ -104,16 +123,7 @@ private fun computeStartDestination(
     }
 }
 
-/** Checks if GhostScreenAccessibilityService is enabled. */
-private fun isMainAccessibilityEnabled(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-    val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
-    return enabledServices.any { service ->
-        val info = service.resolveInfo.serviceInfo
-        info.packageName == context.packageName &&
-        info.name == GhostScreenAccessibilityService::class.java.name
-    }
-}
+
 
 @Composable
 fun GhostScreenApp(

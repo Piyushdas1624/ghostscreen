@@ -33,4 +33,11 @@ interface AppDao {
 
     @Query("DELETE FROM audit_logs")
     suspend fun clearAuditLogs()
+
+    @Query("DELETE FROM protected_apps WHERE packageName = :packageName")
+    suspend fun deleteProtectedAppByPackage(packageName: String)
+
+    /** Bulk wipe — used by the debug dev menu and the future "clear all" setting. */
+    @Query("DELETE FROM protected_apps")
+    suspend fun clearApps()
 }

@@ -34,6 +34,7 @@ import com.etaegord.ghostscreen.data.ProtectedApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Build
 
 data class AppItemInfo(
     val packageName: String,
@@ -206,7 +207,10 @@ fun SmartMaskSettingsScreen(
                 // Avoid duplicates if already loaded via launcher
                 if (loadedApps.none { it.packageName == pkg }) {
                     try {
-                        val appInfo = pm.getApplicationInfo(pkg, 0)
+                        val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                            pm.getApplicationInfo(pkg, android.content.pm.PackageManager.ApplicationInfoFlags.of(0))
+                        else
+                            @Suppress("DEPRECATION") pm.getApplicationInfo(pkg, 0)
                         val icon = pm.getApplicationIcon(appInfo)
                         loadedApps.add(
                             AppItemInfo(
@@ -382,9 +386,7 @@ fun SmartMaskSettingsScreen(
                                                 ProtectedApp(app.packageName, app.appName)
                                             )
                                         } else {
-                                            db.appDao().deleteProtectedApp(
-                                                ProtectedApp(app.packageName, app.appName)
-                                            )
+                                            db.appDao().deleteProtectedAppByPackage(app.packageName)
                                         }
                                     }
                                 }
@@ -415,9 +417,7 @@ fun SmartMaskSettingsScreen(
                                                 ProtectedApp(app.packageName, app.appName)
                                             )
                                         } else {
-                                            db.appDao().deleteProtectedApp(
-                                                ProtectedApp(app.packageName, app.appName)
-                                            )
+                                            db.appDao().deleteProtectedAppByPackage(app.packageName)
                                         }
                                     }
                                 }
@@ -454,10 +454,15 @@ fun AppRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // App Icon
+                // App Icon — bitmap is decoded once per app and cached, otherwise
+                // toBitmap()/asImageBitmap() would allocate on every recomposition
+                // and cause GC jank in a long app list.
                 if (app.icon != null) {
+                    val imageBitmap = remember(app.packageName) {
+                        app.icon.toBitmap(56, 56).asImageBitmap()
+                    }
                     Image(
-                        bitmap = app.icon.toBitmap(56, 56).asImageBitmap(),
+                        bitmap = imageBitmap,
                         contentDescription = null,
                         modifier = Modifier
                             .size(44.dp)

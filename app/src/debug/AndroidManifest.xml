@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only manifest. This file is merged into the debug build ONLY.
+     The DeveloperActivity and its launcher alias never ship in release. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- The real dev activity (must be declared before any alias targets it). -->
+        <activity
+            android:name=".dev.DeveloperActivity"
+            android:label="[D] GhostScreen Dev"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light" />
+
+        <!-- A second launcher icon that goes straight to the dev menu. Label is
+             prefixed with "[D]" so it's visually distinct from the real app. -->
+        <activity-alias
+            android:name=".dev.DeveloperAlias"
+            android:targetActivity=".dev.DeveloperActivity"
+            android:label="[D] GhostScreen Dev"
+            android:icon="@drawable/ic_launcher_foreground"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+    </application>
+</manifest>

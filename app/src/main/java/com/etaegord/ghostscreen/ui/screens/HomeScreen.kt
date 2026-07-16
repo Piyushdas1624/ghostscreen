@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -29,39 +30,15 @@ import androidx.compose.ui.unit.sp
 import com.etaegord.ghostscreen.data.AppDatabase
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
-
-@Composable
-private fun rememberManualLoopAnim(
-    initialValue: Float,
-    targetValue: Float,
-    durationMs: Long
-): State<Float> {
-    val state = remember { mutableStateOf(initialValue) }
-    LaunchedEffect(Unit) {
-        var startTime = System.currentTimeMillis()
-        var goingUp = true
-        while (true) {
-            val now = System.currentTimeMillis()
-            var elapsed = now - startTime
-            if (elapsed > durationMs) {
-                elapsed = durationMs
-                startTime = now
-                goingUp = !goingUp
-            }
-            val fraction = elapsed.toFloat() / durationMs
-            // FastOutSlowIn approximate easing (cosine)
-            val eased = (1f - kotlin.math.cos(fraction * Math.PI.toFloat())) / 2f
-            
-            state.value = if (goingUp) {
-                initialValue + (targetValue - initialValue) * eased
-            } else {
-                targetValue - (targetValue - initialValue) * eased
-            }
-            kotlinx.coroutines.delay(16) // ~60fps manual ticker
-        }
-    }
-    return state
-}
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,18 +55,54 @@ fun HomeScreen(
 
     // Status indicators
     var isOverlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var isAccessibilityGranted by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
+    var isAccessibilityGranted by remember { mutableStateOf(isGhostScreenAccessibilityEnabled(context)) }
+
+    // Refresh permission + armed state when returning from system settings.
+    // Without this the warning banners and armed chip stay stale after the user
+    // grants overlay/accessibility permission or toggles the app from outside.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isOverlayGranted = Settings.canDrawOverlays(context)
+                isAccessibilityGranted = isGhostScreenAccessibilityEnabled(context)
+                isArmed = preferencesManager.isArmed
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Database counts
     val protectedAppsCount by db.appDao().getAllProtectedApps().collectAsState(initial = emptyList())
     val auditLogsCount by db.appDao().getAllAuditLogs().collectAsState(initial = emptyList())
 
     // ──────────────────────────────────────────────────
-    // Performance-optimized manual ticker pulse animation
-    // Bypasses Compose Animation system entirely per user rule
+    // Pulse animation. One choreographer-driven InfiniteTransition (not two
+    // 16ms-ticking forever-coroutines) drives both pulse values, so the home
+    // screen no longer recomposes constantly while idle. graphicsLayer keeps the
+    // work on the GPU compositor. The overlay engine (separate, custom view) is
+    // untouched and still bypasses Compose animation per the project rule.
     // ──────────────────────────────────────────────────
-    val pulseScale by rememberManualLoopAnim(initialValue = 0.92f, targetValue = 1.0f, durationMs = 2000L)
-    val pulseAlpha by rememberManualLoopAnim(initialValue = 0.3f, targetValue = 0.7f, durationMs = 2000L)
+    val pulseTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse")
+    val pulseScale by pulseTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.0f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
 
     Scaffold(
         topBar = {
@@ -262,8 +275,9 @@ fun HomeScreen(
 
                         Card(
                             onClick = {
-                                isArmed = !isArmed
-                                preferencesManager.isArmed = isArmed
+                                val newArmed = !preferencesManager.isArmed
+                                preferencesManager.isArmed = newArmed
+                                isArmed = newArmed
                             },
                             modifier = Modifier
                                 .size(160.dp)
@@ -566,15 +580,3 @@ fun BottomNavigationBar(
     }
 }
 
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-    val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
-    for (service in enabledServices) {
-        val serviceInfo = service.resolveInfo.serviceInfo
-        if (serviceInfo.packageName == context.packageName &&
-            serviceInfo.name == GhostScreenAccessibilityService::class.java.name) {
-            return true
-        }
-    }
-    return false
-}

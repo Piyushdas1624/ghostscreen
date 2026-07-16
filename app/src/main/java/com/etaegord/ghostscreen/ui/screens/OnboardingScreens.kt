@@ -39,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
+import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -183,7 +184,7 @@ fun WelcomeScreenContent(onNext: () -> Unit) {
 fun PermissionScreenContent(onNext: () -> Unit) {
     val context = LocalContext.current
     var isOverlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var isAccessibilityGranted by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
+    var isAccessibilityGranted by remember { mutableStateOf(isGhostScreenAccessibilityEnabled(context)) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -191,16 +192,20 @@ fun PermissionScreenContent(onNext: () -> Unit) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isOverlayGranted = Settings.canDrawOverlays(context)
-                isAccessibilityGranted = isAccessibilityServiceEnabled(context)
+                isAccessibilityGranted = isGhostScreenAccessibilityEnabled(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Auto-skip after 1.5s if all permissions granted to show visual feedback first
+    // Bug 9: Track whether permissions were NOT granted on initial composition.
+    // Only auto-advance if permissions transitioned from missing→granted during this session.
+    val hadMissingOnEntry = remember { !Settings.canDrawOverlays(context) || !isGhostScreenAccessibilityEnabled(context) }
+
+    // Auto-skip after 1.5s ONLY if permissions were granted during this session
     LaunchedEffect(isOverlayGranted, isAccessibilityGranted) {
-        if (isOverlayGranted && isAccessibilityGranted) {
+        if (hadMissingOnEntry && isOverlayGranted && isAccessibilityGranted) {
             delay(1500)
             onNext()
         }
@@ -470,14 +475,3 @@ fun AllSetScreenContent(onFinish: () -> Unit) {
     }
 }
 
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-    val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
-    for (service in enabledServices) {
-        val serviceInfo = service.resolveInfo.serviceInfo
-        if (serviceInfo.packageName == context.packageName && serviceInfo.name == GhostScreenAccessibilityService::class.java.name) {
-            return true
-        }
-    }
-    return false
-}
