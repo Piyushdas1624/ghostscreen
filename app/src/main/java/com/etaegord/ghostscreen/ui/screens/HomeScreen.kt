@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import com.etaegord.ghostscreen.util.ProtectionModes
 import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -276,6 +277,18 @@ fun HomeScreen(
                         Card(
                             onClick = {
                                 val newArmed = !preferencesManager.isArmed
+                                // Smart Arm is mutually exclusive with Manual/Instant Mask at
+                                // activation time: arming ON clears Manual so a leftover Tile/Shortcut
+                                // session never makes Smart look like global masking. Disarming keeps
+                                // Manual (the Tile may still be wanted). Rule is centralized + tested
+                                // in ProtectionModes so Tile/Onboarding reuse it.
+                                val newManual = ProtectionModes.manualAfterArm(
+                                    newArmed,
+                                    preferencesManager.isManualOverrideActive
+                                )
+                                if (newManual != preferencesManager.isManualOverrideActive) {
+                                    preferencesManager.isManualOverrideActive = newManual
+                                }
                                 preferencesManager.isArmed = newArmed
                                 isArmed = newArmed
                             },
