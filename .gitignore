@@ -29,3 +29,7 @@ phoneicon.svg
 
 # kotlin daemon logs
 .kotlin/
+
+# device dumps / screenshots (dev scratch)
+gs_home.png
+ui_dump.xml
