@@ -236,22 +236,35 @@ fun SmartMaskSettingsScreen(
 
     var filterMode by remember { mutableStateOf("All") } // "All", "Enabled", "Disabled"
 
-    // Filter app list based on search query and filter mode
-    val filteredList = remember(appList, searchQuery, filterMode, protectedPackages) {
-        var list = appList
-        if (filterMode == "Enabled") {
-            list = list.filter { protectedPackages.contains(it.packageName) }
-        } else if (filterMode == "Disabled") {
-            list = list.filter { !protectedPackages.contains(it.packageName) }
+    // Filter app list based on search query and filter mode.
+    //
+    // Filter-chip crash root cause: the old inline filter re-derived the list
+    // from `protectedPackages` (a Room Flow emission) on every toggle. Under
+    // the "Enabled" filter, toggling a row off re-emitted the Flow and yanked
+    // the row out of the list while its onToggle coroutine was still in flight,
+    // dropping the row's LazyColumn key mid-composition.
+    //
+    // Fix: route through the pure AppListFilter (unit-tested) and derive the
+    // result ONCE via derivedStateOf so the visible list is a stable snapshot
+    // for the composition pass. The DB write is already idempotent, so a row
+    // that has already vanished is a harmless no-op.
+    val filterScope = remember(filterMode) {
+        when (filterMode) {
+            "Enabled" -> com.etaegord.ghostscreen.util.AppListFilter.Scope.ENABLED
+            "Disabled" -> com.etaegord.ghostscreen.util.AppListFilter.Scope.DISABLED
+            else -> com.etaegord.ghostscreen.util.AppListFilter.Scope.ALL
         }
-        
-        if (searchQuery.isBlank()) {
-            list
-        } else {
-            list.filter { 
-                it.appName.contains(searchQuery, ignoreCase = true) || 
-                it.packageName.contains(searchQuery, ignoreCase = true)
-            }
+    }
+    val filteredList by remember {
+        derivedStateOf {
+            com.etaegord.ghostscreen.util.AppListFilter.apply(
+                all = appList,
+                scope = filterScope,
+                query = searchQuery,
+                protectedSet = protectedPackages,
+                packageName = { it.packageName },
+                appName = { it.appName }
+            )
         }
     }
 
