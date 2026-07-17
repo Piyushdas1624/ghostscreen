@@ -457,12 +457,21 @@ fun AppRow(
                 // App Icon — bitmap is decoded once per app and cached, otherwise
                 // toBitmap()/asImageBitmap() would allocate on every recomposition
                 // and cause GC jank in a long app list.
-                if (app.icon != null) {
-                    val imageBitmap = remember(app.packageName) {
-                        app.icon.toBitmap(56, 56).asImageBitmap()
-                    }
+                //
+                // Bug fix (search "GhostScreen" crash): the app's OWN launcher entry
+                // is returned by queryIntentActivities and its icon is an
+                // AdaptiveIconDrawable whose intrinsic size is -1 until bounded —
+                // Drawable.toBitmap can throw on some API levels for that case.
+                // Because this runs inside remember(), the exception was re-thrown on
+                // every recomposition that re-keyed it (e.g. typing in the search box),
+                // making the search-for-"GhostScreen" crash deterministic.
+                // Fix: runCatching so any decode failure falls back to the letter tile.
+                val cachedBitmap = remember(app.packageName) {
+                    runCatching { app.icon?.toBitmap(56, 56)?.asImageBitmap() }.getOrNull()
+                }
+                if (cachedBitmap != null) {
                     Image(
-                        bitmap = imageBitmap,
+                        bitmap = cachedBitmap,
                         contentDescription = null,
                         modifier = Modifier
                             .size(44.dp)
