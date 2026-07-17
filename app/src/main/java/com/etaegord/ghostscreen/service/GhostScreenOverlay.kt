@@ -117,6 +117,20 @@ class GhostScreenOverlay(
     private var boxEditActive = false
     private var cornerAlpha_  = FULL_ALPHA   // shared dimming for all corners + border
 
+    // ── Tracked alpha-fade ticker ───────────────────────────────────
+    // The fade used to be an anonymous self-reposting Runnable created fresh
+    // on every animAlpha() call and never cancellable — so a hide() landing
+    // mid-fade left it ticking for ~182ms, calling invalidateCorners() on
+    // corner views that had just been nulled (teardown flicker / NPE risk).
+    // One reusable ticker is enough: animAlpha always supersedes any in-flight
+    // fade, and hide() cancels it. This preserves the manual-ticker invariant
+    // (no Compose animation APIs touch the overlay).
+    private var alphaTicker: Runnable? = null
+    private fun cancelAlphaFade() {
+        alphaTicker?.let { mainHandler.removeCallbacks(it) }
+        alphaTicker = null
+    }
+
     // ── Exit button position ────────────────────────────────────────
     private var exitBtnX = -1f
     private var exitBtnY = -1f
@@ -196,6 +210,7 @@ class GhostScreenOverlay(
         isDraggingMasksHidden = false
         boxEditActive = false
         mainHandler.removeCallbacks(dimRun); mainHandler.removeCallbacks(editDimRun)
+        cancelAlphaFade()   // stop any in-flight fade from mutating the views we just tore down
         isShowing = false
     }
 
@@ -571,13 +586,16 @@ class GhostScreenOverlay(
     // Alpha animation helper
     // ══════════════════════════════════════════════════════════════════
     private fun animAlpha(get: () -> Int, set: (Int) -> Unit, target: Int) {
+        cancelAlphaFade()
         val steps = 14; val step = (target - get()) / steps.toFloat(); var i = 0
         val r = object : Runnable {
             override fun run() {
+                if (!isShowing) { alphaTicker = null; return }   // torn down: stop mutating detached views
                 if (i++ < steps) { set((get() + step).toInt().coerceIn(0, 255)); mainHandler.postDelayed(this, 13) }
-                else set(target)
+                else { set(target); alphaTicker = null }
             }
         }
+        alphaTicker = r
         mainHandler.post(r)
     }
 
@@ -720,6 +738,16 @@ class GhostScreenOverlay(
 
         private fun scheduleIdle() { mainHandler.removeCallbacks(idleRun); mainHandler.postDelayed(idleRun, IDLE_MS) }
         private fun wakeUp() { mainHandler.removeCallbacks(idleRun); animAlpha({ alpha_ }, { alpha_ = it; invalidate() }, FULL_ALPHA); scheduleIdle() }
+
+        // Bug fix (handler leak): posted runnables hold an implicit reference to this
+        // inner-class View (and through it the outer overlay + service Context). Clear
+        // them when the view is detached so it can be GC'd instead of lingering until
+        // the delay expires / firing on a detached view.
+        override fun onDetachedFromWindow() {
+            super.onDetachedFromWindow()
+            mainHandler.removeCallbacks(idleRun)
+            mainHandler.removeCallbacks(longRun)
+        }
 
         override fun onDraw(canvas: Canvas) {
             val w = width.toFloat(); val h = height.toFloat(); val cy = h / 2f
@@ -875,6 +903,11 @@ class GhostScreenOverlay(
             }
         }
 
+        override fun onDetachedFromWindow() {
+            super.onDetachedFromWindow()
+            mainHandler.removeCallbacks(hintRun)
+        }
+
         override fun onDraw(canvas: Canvas) {
             val r = width / 2f
             bgP.alpha = cornerAlpha_
@@ -955,6 +988,13 @@ class GhostScreenOverlay(
 
         private fun scheduleIdle() { mainHandler.removeCallbacks(idleRun); mainHandler.postDelayed(idleRun, IDLE_MS) }
         private fun wakeUp() { mainHandler.removeCallbacks(idleRun); animAlpha({ btnAlpha }, { btnAlpha = it; invalidate() }, FULL_ALPHA); scheduleIdle() }
+
+        override fun onDetachedFromWindow() {
+            super.onDetachedFromWindow()
+            mainHandler.removeCallbacks(idleRun)
+            mainHandler.removeCallbacks(hideLbl)
+            mainHandler.removeCallbacks(longRun)
+        }
 
         override fun onDraw(canvas: Canvas) {
             // Reserve top area for the % pop-up label
