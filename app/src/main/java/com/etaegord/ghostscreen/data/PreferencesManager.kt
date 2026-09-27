@@ -51,48 +51,86 @@ class PreferencesManager(context: Context) {
         private const val KEY_BLUR_ENABLED = "blur_enabled"
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_DISCLAIMER_UNDERSTOOD = "disclaimer_understood"
+
+        @Volatile
+        private var instance: PreferencesManager? = null
+
+        fun getInstance(context: Context): PreferencesManager =
+            instance ?: synchronized(this) {
+                instance ?: PreferencesManager(context.applicationContext).also { instance = it }
+            }
     }
 
     init {
-        // Initialize encrypted prefs on background thread to avoid blocking UI
+        // Initialize encrypted prefs on background thread to avoid blocking UI.
         val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-            try {
-                val masterKey = MasterKey.Builder(appContext)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-
-                val ePrefs = EncryptedSharedPreferences.create(
-                    appContext,
-                    PREFS_NAME_ENCRYPTED,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-
-                // Migrate plain prefs → encrypted prefs (one time)
-                if (!ePrefs.getBoolean(KEY_MIGRATED, false)) {
-                    val editor = ePrefs.edit()
-                    plainPrefs.all.forEach { (key, value) ->
-                        when (value) {
-                            is Boolean -> editor.putBoolean(key, value)
-                            is Int -> editor.putInt(key, value)
-                            is Float -> editor.putFloat(key, value)
-                            is String -> editor.putString(key, value)
-                            is Long -> editor.putLong(key, value)
-                        }
-                    }
-                    editor.putBoolean(KEY_MIGRATED, true)
-                    editor.apply()
-                    Log.d(TAG, "Migrated plain prefs to encrypted prefs")
-                }
-
-                encryptedPrefs = ePrefs
-                Log.d(TAG, "Encrypted prefs initialized successfully")
+            val ePrefs = try {
+                createEncryptedPrefs(appContext)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to init encrypted prefs, staying with plain prefs", e)
+                // Corrupt keyset/ciphertext (observed on-device as
+                // AEADBadTagException): the stored encrypted prefs reference a
+                // Keystore master key that no longer decrypts them — typically
+                // caused by reinstalls, key rotation, or a clock-was-wrong first
+                // boot. Tink cannot recover; the only sane fix is to drop the
+                // orphaned store + its "have I installed?" sentinel and rebuild
+                // from the (always-trusted) plain prefs. Verified recoverable
+                // on a real device.
+                Log.e(TAG, "Encrypted prefs corrupt, rebuilding from plain prefs", e)
+                deleteEncryptedStore(appContext)
+                try {
+                    createEncryptedPrefs(appContext)
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Encrypted prefs still failing after wipe; using plain prefs", e2)
+                    return@launch
+                }
             }
+
+            // Always sync plain -> encrypted on init (not just once via
+            // KEY_MIGRATED). This closes the startup desync window: any setting
+            // written to plainPrefs BEFORE encryptedPrefs was ready (or while it
+            // was broken) is replayed here, so reads can safely flip to the
+            // encrypted store without reverting recent user changes.
+            val editor = ePrefs.edit()
+            plainPrefs.all.forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    is String -> editor.putString(key, value)
+                    is Long -> editor.putLong(key, value)
+                }
+            }
+            editor.putBoolean(KEY_MIGRATED, true)
+            editor.apply()
+
+            encryptedPrefs = ePrefs
+            Log.d(TAG, "Encrypted prefs initialized successfully")
         }
+    }
+
+    private fun createEncryptedPrefs(appContext: android.content.Context): SharedPreferences {
+        val masterKey = MasterKey.Builder(appContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        return EncryptedSharedPreferences.create(
+            appContext,
+            PREFS_NAME_ENCRYPTED,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    /** Drop the orphaned encrypted store and Tink's install sentinel so a fresh
+     *  keyset can be created on the next attempt. */
+    private fun deleteEncryptedStore(appContext: android.content.Context) {
+        runCatching {
+            appContext.deleteSharedPreferences(PREFS_NAME_ENCRYPTED)
+        }
+        // Tink's AndroidKeysetManager records "have I installed?" here; if left
+        // behind it short-circuits keyset creation and re-poisons the next init.
+        runCatching { java.io.File(appContext.filesDir, "profileInstalled").delete() }
     }
 
     /** Returns the best available prefs (encrypted if ready, plain otherwise) */

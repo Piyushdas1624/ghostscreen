@@ -9,7 +9,7 @@ import com.etaegord.ghostscreen.data.PreferencesManager
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            val preferencesManager = PreferencesManager(context)
+            val preferencesManager = PreferencesManager.getInstance(context)
             Log.d("BootReceiver", "Boot completed. Launch on boot enabled: ${preferencesManager.isLaunchOnBootEnabled}")
             
             if (preferencesManager.isLaunchOnBootEnabled) {

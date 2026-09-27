@@ -48,6 +48,10 @@ object OverlayTransition {
             p.contains("swiftkey") ||
             p.contains("miinput") ||
             p.contains("baidu.input") ||
+            p.contains("gokeyboard") ||
+            p.contains("aitype") ||
+            p.contains("ai.type") ||
+            p.contains("gboard") ||
             p.contains("ime.") ||
             // ponytail: OEM launchers fire TYPE_WINDOW_STATE_CHANGED during app-switch
             // animations. Without these the overlay flickers off/on on those devices.

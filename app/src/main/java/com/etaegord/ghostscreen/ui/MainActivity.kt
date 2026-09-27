@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         
         // setupRandomIconIfNeeded() removed to prevent app crash on first launch
 
-        preferencesManager = PreferencesManager(applicationContext)
+        preferencesManager = PreferencesManager.getInstance(applicationContext)
         db = AppDatabase.getDatabase(applicationContext)
 
         enableEdgeToEdge()

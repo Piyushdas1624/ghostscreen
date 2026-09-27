@@ -13,7 +13,7 @@ class GhostScreenTileService : TileService() {
 
     override fun onCreate() {
         super.onCreate()
-        preferencesManager = PreferencesManager(applicationContext)
+        preferencesManager = PreferencesManager.getInstance(applicationContext)
     }
 
     override fun onStartListening() {
@@ -24,13 +24,18 @@ class GhostScreenTileService : TileService() {
     override fun onClick() {
         super.onClick()
 
-        // Toggle Manual Mode. The accessibility service's
-        // OnSharedPreferenceChangeListener reacts to this pref change and
-        // shows/hides the overlay — including a proper hide when turning off,
-        // even if the current foreground app is protected.
-        preferencesManager.isManualOverrideActive = !preferencesManager.isManualOverrideActive
+        // Toggle Manual Mode.
+        val newState = !preferencesManager.isManualOverrideActive
 
-        updateTileState()
+        // Instant visual feedback: update QS tile immediately before pref write
+        qsTile?.let { tile ->
+            tile.state = if (newState) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            tile.label = if (newState) "GhostScreen (On)" else "GhostScreen"
+            tile.updateTile()
+        }
+
+        // Pref change triggers accessibility service's OnSharedPreferenceChangeListener
+        preferencesManager.isManualOverrideActive = newState
     }
 
     private fun updateTileState() {

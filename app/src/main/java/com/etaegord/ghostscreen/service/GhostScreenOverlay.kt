@@ -93,8 +93,13 @@ class GhostScreenOverlay(
         liveOpacity = displayPct.coerceIn(0, 100)
         invalidateMasks()
     }
+    private fun setOpacityLive(displayPct: Int) {
+        liveOpacity = displayPct.coerceIn(0, 100)
+        maskView?.invalidate()
+    }
     private fun persistOpacity() {
         preferencesManager.transparency = liveOpacity
+        invalidateMasks()
     }
 
     private fun invalidateMasks() {
@@ -212,6 +217,45 @@ class GhostScreenOverlay(
         mainHandler.removeCallbacks(dimRun); mainHandler.removeCallbacks(editDimRun)
         cancelAlphaFade()   // stop any in-flight fade from mutating the views we just tore down
         isShowing = false
+    }
+
+    fun onConfigurationChanged() {
+        if (!isShowing) return
+        val oldW = screenW
+        val oldH = screenH
+        updateScreenDimensions()
+        if (oldW == screenW && oldH == screenH) return
+
+        // Exit button clamped to new screen bounds
+        val sz = (EXIT_DP * density).toInt()
+        exitBtnX = exitBtnX.coerceIn(0f, (screenW - sz).toFloat())
+        exitBtnY = exitBtnY.coerceIn(0f, (screenH - sz).toFloat())
+        exitBtnView?.let {
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.x = exitBtnX.toInt()
+            p.y = exitBtnY.toInt()
+            safeUpdate(it)
+        }
+
+        when (overlayMode) {
+            Mode.SPLIT -> {
+                val half = (preferencesManager.cutoutHeightPct / 2f).coerceIn(0.02f, 0.45f)
+                stripTopY = ((preferencesManager.cutoutYPct - half) * screenH).coerceIn(0f, screenH.toFloat())
+                stripBotY = ((preferencesManager.cutoutYPct + half) * screenH).coerceIn(0f, screenH.toFloat())
+                updateStripLayouts()
+            }
+            Mode.BOX -> {
+                val m = MIN_BOX_DP * density
+                val bw = (boxRight - boxLeft).coerceIn(m, screenW.toFloat())
+                val bh = (boxBottom - boxTop).coerceIn(m, screenH.toFloat())
+                boxLeft = boxLeft.coerceIn(0f, (screenW - bw).coerceAtLeast(0f))
+                boxTop = boxTop.coerceIn(0f, (screenH - bh).coerceAtLeast(0f))
+                boxRight = boxLeft + bw
+                boxBottom = boxTop + bh
+                updateCornerPositions()
+            }
+        }
+        maskView?.invalidate()
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -568,6 +612,24 @@ class GhostScreenOverlay(
         updateCornerPositions()
     }
 
+    // Box drag — called by corner handles during active drag (cheap: updates handles + invalidates passive mask outline)
+    fun dragBoxCorner(cornerIdx: Int, dx: Float, dy: Float) {
+        val m = MIN_BOX_DP * density
+        when (cornerIdx) {
+            0 -> { boxLeft = min(boxLeft + dx, boxRight - m); boxTop = min(boxTop + dy, boxBottom - m) }   // TL
+            1 -> { boxRight = max(boxRight + dx, boxLeft + m); boxTop = min(boxTop + dy, boxBottom - m) }  // TR
+            2 -> { boxLeft = min(boxLeft + dx, boxRight - m); boxBottom = max(boxBottom + dy, boxTop + m) }// BL
+            3 -> { boxRight = max(boxRight + dx, boxLeft + m); boxBottom = max(boxBottom + dy, boxTop + m)}// BR
+        }
+        val bw = (boxRight - boxLeft).coerceAtLeast(m)
+        val bh = (boxBottom - boxTop).coerceAtLeast(m)
+        boxLeft = boxLeft.coerceIn(0f, (screenW - bw).coerceAtLeast(0f))
+        boxTop  = boxTop.coerceIn(0f, (screenH - bh).coerceAtLeast(0f))
+        boxRight = boxLeft + bw; boxBottom = boxTop + bh
+        updateCornerHandlesOnly()
+        maskView?.invalidate()
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // Haptics
     // ══════════════════════════════════════════════════════════════════
@@ -860,7 +922,7 @@ class GhostScreenOverlay(
                             val range = maxX - minX
                             if (range > 0) {
                                 // Live in-memory update only (no disk write per move).
-                                setOpacity((((e.x - minX) / range) * 100).toInt().coerceIn(0, 100))
+                                setOpacityLive((((e.x - minX) / range) * 100).toInt().coerceIn(0, 100))
                             }
                             stripTopView?.invalidate(); stripBotView?.invalidate()
                         }
@@ -939,11 +1001,7 @@ class GhostScreenOverlay(
                         setMaskWindowsVisible(false)
                     }
                     if (dragging && boxEditActive) {
-                        // Bug 3: reuse shared applyBoxDelta instead of inline duplicate
-                        applyBoxDelta(cornerIdx, dx, dy)
-                        // Override the expensive mask-window relayout with the
-                        // cheap handle-only path during active drag.
-                        updateCornerHandlesOnly()
+                        dragBoxCorner(cornerIdx, dx, dy)
                         scheduleEditDim()
                     }
                     lx = e.rawX; ly = e.rawY; return true
@@ -1051,7 +1109,7 @@ class GhostScreenOverlay(
                     val dx = e.rawX - startX
                     if (!dragging && abs(dx) > 7 * density) { dragging = true; mainHandler.removeCallbacks(longRun) }
                     if (dragging) {
-                        setOpacity((startOp + (dx / (screenW * 0.6f) * 100).toInt()).coerceIn(0, 100))
+                        setOpacityLive((startOp + (dx / (screenW * 0.6f) * 100).toInt()).coerceIn(0, 100))
                         showLabel = true; maskView?.invalidate(); invalidate()
                     }
                     return true

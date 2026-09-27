@@ -121,6 +121,9 @@ class OverlayTransitionTest {
         assertTrue(OverlayTransition.isTransient("com.miui.systemui"))
         assertTrue(OverlayTransition.isTransient("com.google.android.inputmethod.latin"))
         assertTrue(OverlayTransition.isTransient("com.samsung.android.honeyboard"))
+        assertTrue(OverlayTransition.isTransient("com.jb.emoji.gokeyboard"))
+        assertTrue(OverlayTransition.isTransient("com.aitype.android"))
+        assertTrue(OverlayTransition.isTransient("com.google.android.gboard"))
         assertTrue(OverlayTransition.isTransient("android"))
         assertTrue(!OverlayTransition.isTransient("com.whatsapp"))
     }

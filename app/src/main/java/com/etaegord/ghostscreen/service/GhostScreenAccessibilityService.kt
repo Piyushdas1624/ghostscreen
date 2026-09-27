@@ -53,7 +53,12 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 // then re-evaluate the real current app.
                 overlayShownForPackage = null
                 overlay?.hide()
-                currentPackageName?.let { checkCurrentApp(it) }
+                currentPackageName?.let { pkg ->
+                    pendingCheckJob?.cancel()
+                    pendingCheckJob = serviceScope.launch {
+                        checkCurrentApp(pkg)
+                    }
+                }
             }
         }
     }
@@ -61,11 +66,27 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service onCreate")
-        preferencesManager = PreferencesManager(applicationContext)
+        preferencesManager = PreferencesManager.getInstance(applicationContext)
         db = AppDatabase.getDatabase(applicationContext)
         overlay = GhostScreenOverlay(this, preferencesManager)
         
         preferencesManager.registerOnSharedPreferenceChangeListener(prefsListener)
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Log.d(TAG, "Service onServiceConnected")
+        // Initial state evaluation on connect (Issue #5)
+        if (preferencesManager.isManualOverrideActive) {
+            overlayShownForPackage = "manual"
+            overlay?.show()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Log.d(TAG, "Configuration changed: orientation=${newConfig.orientation}")
+        overlay?.onConfigurationChanged()
     }
 
     private var lastActiveAppPackage: String? = null
@@ -98,7 +119,9 @@ class GhostScreenAccessibilityService : AccessibilityService() {
 
             currentPackageName = packageName
 
-            // Cancel any pending check to debounce rapid events
+            // Cancel any pending check to debounce rapid events.
+            // Cancelling pendingCheckJob cancels the active DB query as well because
+            // checkCurrentApp is suspend (Issue #2 race condition fix).
             pendingCheckJob?.cancel()
             pendingCheckJob = serviceScope.launch {
                 // Small delay to debounce rapid window-state-change bursts
@@ -110,74 +133,72 @@ class GhostScreenAccessibilityService : AccessibilityService() {
 
     private var hideJob: Job? = null
 
-    private fun checkCurrentApp(packageName: String) {
-        serviceScope.launch {
-            val isTransient = OverlayTransition.isTransient(packageName)
-            // Resolve the "effective" real app: for transient surfaces use the
-            // last real app the user was in; otherwise use the current package.
-            val effectivePackage = if (isTransient) lastActiveAppPackage else packageName
+    private suspend fun checkCurrentApp(packageName: String) {
+        val isTransient = OverlayTransition.isTransient(packageName)
+        // Resolve the "effective" real app: for transient surfaces use the
+        // last real app the user was in; otherwise use the current package.
+        val effectivePackage = if (isTransient) lastActiveAppPackage else packageName
 
-            val shouldProtect = if (effectivePackage != null) {
-                withContext(Dispatchers.IO) {
-                    db.appDao().isAppProtected(effectivePackage)
-                }
-            } else false
+        val shouldProtect = if (effectivePackage != null) {
+            withContext(Dispatchers.IO) {
+                db.appDao().isAppProtected(effectivePackage)
+            }
+        } else false
 
-            val decision = OverlayTransition.decide(
-                currentPackage = packageName,
-                isTransient = isTransient,
-                isProtected = shouldProtect,
-                lastEffectiveProtected = lastProtectedPackage,
-                armed = preferencesManager.isArmed,
-                manualOverride = preferencesManager.isManualOverrideActive
-            )
+        val decision = OverlayTransition.decide(
+            currentPackage = packageName,
+            isTransient = isTransient,
+            isProtected = shouldProtect,
+            lastEffectiveProtected = lastProtectedPackage,
+            armed = preferencesManager.isArmed,
+            manualOverride = preferencesManager.isManualOverrideActive
+        )
 
-            withContext(Dispatchers.Main) {
-                when (decision) {
-                    OverlayTransition.Decision.SHOW -> {
-                        hideJob?.cancel()
-                        val tag = if (preferencesManager.isManualOverrideActive) "manual" else effectivePackage
-                        if (tag != null && overlayShownForPackage != tag) {
-                            Log.d(TAG, "Showing overlay for $tag")
-                            overlayShownForPackage = tag
-                            // Remember the protected real app so transient surfaces can inherit it.
-                            if (!preferencesManager.isManualOverrideActive && effectivePackage != null) {
-                                lastProtectedPackage = effectivePackage
-                            }
-                            overlay?.show()
+        withContext(Dispatchers.Main) {
+            when (decision) {
+                OverlayTransition.Decision.SHOW -> {
+                    hideJob?.cancel()
+                    val tag = if (preferencesManager.isManualOverrideActive) "manual" else effectivePackage
+                    if (tag != null && overlayShownForPackage != tag) {
+                        Log.d(TAG, "Showing overlay for $tag")
+                        overlayShownForPackage = tag
+                        // Remember the protected real app so transient surfaces can inherit it.
+                        if (!preferencesManager.isManualOverrideActive && effectivePackage != null) {
+                            lastProtectedPackage = effectivePackage
+                        }
+                        overlay?.show()
 
-                            // Write to audit log in background
-                            effectivePackage?.let { pkg ->
-                                serviceScope.launch(Dispatchers.IO) {
-                                    val appName = getAppName(pkg)
-                                    db.appDao().insertAuditLog(
-                                        AuditLog(
-                                            packageName = pkg,
-                                            appName = appName,
-                                            action = "Protected with Privacy Overlay"
-                                        )
+                        // Write to audit log in background
+                        effectivePackage?.let { pkg ->
+                            serviceScope.launch(Dispatchers.IO) {
+                                val appName = getAppName(pkg)
+                                db.appDao().insertAuditLog(
+                                    AuditLog(
+                                        packageName = pkg,
+                                        appName = appName,
+                                        action = "Protected with Privacy Overlay"
                                     )
-                                }
+                                )
                             }
                         }
                     }
-                    OverlayTransition.Decision.HIDE -> {
-                        if (overlayShownForPackage != null) {
-                            hideJob?.cancel()
-                            hideJob = serviceScope.launch {
-                                delay(350)
-                                overlayShownForPackage = null
-                                overlay?.hide()
-                            }
-                        }
-                        // Clearing manual override must actually take the mask down.
-                        lastProtectedPackage = null
-                    }
-                    OverlayTransition.Decision.STAY -> {
-                        // Transient surface over a protected app: keep the mask
-                        // exactly as-is. Cancel any pending hide so it doesn't drop.
+                }
+                OverlayTransition.Decision.HIDE -> {
+                    if (overlayShownForPackage != null) {
                         hideJob?.cancel()
+                        hideJob = serviceScope.launch {
+                            delay(350)
+                            overlayShownForPackage = null
+                            overlay?.hide()
+                        }
                     }
+                    // Clearing manual override must actually take the mask down.
+                    lastProtectedPackage = null
+                }
+                OverlayTransition.Decision.STAY -> {
+                    // Transient surface over a protected app: keep the mask
+                    // exactly as-is. Cancel any pending hide so it doesn't drop.
+                    hideJob?.cancel()
                 }
             }
         }
