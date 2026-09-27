@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import android.content.SharedPreferences
 import com.etaegord.ghostscreen.util.ProtectionModes
 import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import androidx.compose.foundation.background
@@ -56,14 +57,13 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var isArmed by remember { mutableStateOf(preferencesManager.isArmed) }
+    var isManualActive by remember { mutableStateOf(preferencesManager.isManualOverrideActive) }
 
     // Status indicators
     var isOverlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var isAccessibilityGranted by remember { mutableStateOf(isGhostScreenAccessibilityEnabled(context)) }
 
-    // Refresh permission + armed state when returning from system settings.
-    // Without this the warning banners and armed chip stay stale after the user
-    // grants overlay/accessibility permission or toggles the app from outside.
+    // Refresh permission + armed + manual state when returning from system settings or external changes (QS tile / shortcut).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -71,10 +71,21 @@ fun HomeScreen(
                 isOverlayGranted = Settings.canDrawOverlays(context)
                 isAccessibilityGranted = isGhostScreenAccessibilityEnabled(context)
                 isArmed = preferencesManager.isArmed
+                isManualActive = preferencesManager.isManualOverrideActive
             }
         }
+        val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "manual_override_active" || key == "armed") {
+                isManualActive = preferencesManager.isManualOverrideActive
+                isArmed = preferencesManager.isArmed
+            }
+        }
+        preferencesManager.registerOnSharedPreferenceChangeListener(prefsListener)
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            preferencesManager.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        }
     }
 
     // Database counts
@@ -241,12 +252,19 @@ fun HomeScreen(
                             .size(8.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isArmed) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outline
+                                when {
+                                    isManualActive -> MaterialTheme.colorScheme.tertiary
+                                    isArmed -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.outline
+                                }
                             )
                     )
                     Text(
-                        text = if (isArmed) "Protection Active" else "Ready to Mask",
+                        text = when {
+                            isManualActive -> "Manual Mask Active"
+                            isArmed -> "Smart Protection Active"
+                            else -> "Ready to Mask"
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -303,7 +321,7 @@ fun HomeScreen(
                                 if (isArmed) primaryColor.copy(alpha = 0.15f)
                                 else surfaceHigh.copy(alpha = 0.6f)
                             ),
-                        contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center
                     ) {
                         // Interactive center circle
                         val toggleColorTarget = if (isArmed) MaterialTheme.colorScheme.primaryContainer
@@ -355,6 +373,7 @@ fun HomeScreen(
                                 }
                                 preferencesManager.isArmed = newArmed
                                 isArmed = newArmed
+                                isManualActive = preferencesManager.isManualOverrideActive
                             },
                             interactionSource = powerInteractionSource,
                             modifier = Modifier
