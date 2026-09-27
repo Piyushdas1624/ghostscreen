@@ -37,9 +37,12 @@ class GhostScreenAccessibilityService : AccessibilityService() {
             Log.d(TAG, "State changed - Armed: $isArmed, Manual: $isManual")
             if (isManual) {
                 // Manual mode on -> show instantly, regardless of armed/current app.
-                if (overlayShownForPackage != "manual") {
+                val isFullyShowing = overlay?.isFullyShowing() == true
+                if (overlayShownForPackage != "manual" || !isFullyShowing) {
                     overlayShownForPackage = "manual"
-                    overlay?.show()
+                    if (!isFullyShowing) {
+                        overlay?.show()
+                    }
                 }
             } else if (!isArmed) {
                 // Fully disarmed -> hide.
@@ -50,18 +53,20 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 overlay?.hide()
             } else {
                 // Manual just turned OFF (or armed just turned ON) while armed.
-                // Force the overlay down first so a protected current app doesn't
-                // keep the manual mask stuck on (tile "off" did nothing bug),
-                // then re-evaluate the real current app.
-                overlayShownForPackage = null
-                overlay?.hide()
+                // Instead of prematurely tearing down the overlay (which causes black flicker),
+                // evaluate the real current app. If protected, it seamlessly stays up;
+                // if not protected, checkCurrentApp will cleanly fade it out.
                 val pkg = currentPackageName ?: rootInActiveWindow?.packageName?.toString()
-                pkg?.let { targetPkg ->
-                    currentPackageName = targetPkg
+                if (pkg != null) {
+                    currentPackageName = pkg
                     pendingCheckJob?.cancel()
                     pendingCheckJob = serviceScope.launch {
-                        checkCurrentApp(targetPkg)
+                        checkCurrentApp(pkg)
                     }
+                } else {
+                    overlayShownForPackage = null
+                    lastProtectedPackage = null
+                    overlay?.hide()
                 }
             }
         }
@@ -172,14 +177,17 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 OverlayTransition.Decision.SHOW -> {
                     hideJob?.cancel()
                     val tag = if (preferencesManager.isManualOverrideActive) "manual" else effectivePackage
-                    if (tag != null && (overlayShownForPackage != tag || overlay?.isShowing() != true)) {
+                    val isFullyShowing = overlay?.isFullyShowing() == true
+                    if (tag != null && (overlayShownForPackage != tag || !isFullyShowing)) {
                         Log.d(TAG, "Showing overlay for $tag")
                         overlayShownForPackage = tag
                         // Remember the protected real app so transient surfaces can inherit it.
                         if (!preferencesManager.isManualOverrideActive && effectivePackage != null) {
                             lastProtectedPackage = effectivePackage
                         }
-                        overlay?.show()
+                        if (!isFullyShowing) {
+                            overlay?.show()
+                        }
 
                         // Write to audit log in background
                         effectivePackage?.let { pkg ->
@@ -197,15 +205,19 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                     }
                 }
                 OverlayTransition.Decision.HIDE -> {
-                    if (overlayShownForPackage != null) {
-                        hideJob?.cancel()
+                    hideJob?.cancel()
+                    if (overlayShownForPackage != null || overlay?.isShowing() == true) {
+                        val isLeavingManual = !preferencesManager.isManualOverrideActive && overlayShownForPackage == "manual"
                         hideJob = serviceScope.launch {
-                            delay(350)
+                            if (!isLeavingManual) {
+                                delay(200)
+                            }
                             overlayShownForPackage = null
                             overlay?.hide()
                         }
+                    } else {
+                        overlayShownForPackage = null
                     }
-                    // Clearing manual override must actually take the mask down.
                     lastProtectedPackage = null
                 }
                 OverlayTransition.Decision.STAY -> {

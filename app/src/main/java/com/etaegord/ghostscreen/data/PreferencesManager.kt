@@ -50,6 +50,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_BLUR_ENABLED = "blur_enabled"
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_DISCLAIMER_UNDERSTOOD = "disclaimer_understood"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color"
 
         @Volatile
         private var instance: PreferencesManager? = null
@@ -204,6 +205,10 @@ class PreferencesManager(context: Context) {
     var isSmartMaskDisclaimerUnderstood: Boolean
         get() = prefs.getBoolean(KEY_DISCLAIMER_UNDERSTOOD, false)
         set(value) = edit { putBoolean(KEY_DISCLAIMER_UNDERSTOOD, value) }
+
+    var isDynamicColorEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
+        set(value) = edit { putBoolean(KEY_DYNAMIC_COLOR, value) }
 
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         plainPrefs.registerOnSharedPreferenceChangeListener(listener)

@@ -41,9 +41,20 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isHardwareBlurSupported = remember {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            try {
+                val wm = context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+                wm.isCrossWindowBlurEnabled
+            } catch (_: Exception) { false }
+        } else false
+    }
+
     var overlayColor        by remember { mutableStateOf(preferencesManager.color) }
     var launchOnBoot        by remember { mutableStateOf(preferencesManager.isLaunchOnBootEnabled) }
     var vibrateOnActivation by remember { mutableStateOf(preferencesManager.isVibrateOnActivationEnabled) }
+    var dynamicColorEnabled by remember { mutableStateOf(preferencesManager.isDynamicColorEnabled) }
     // Blur mode: mutually exclusive with solid color
     var blurEnabled         by remember { mutableStateOf(preferencesManager.isBlurEnabled) }
     var showColorPicker     by remember { mutableStateOf(false) }
@@ -204,22 +215,42 @@ fun SettingsScreen(
 
                     // Blur description
                     AnimatedVisibility(visible = blurEnabled, enter = expandVertically(), exit = shrinkVertically()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Text(
-                                "Blur/Frost mode obscures content instead of using a solid color. " +
-                                "Control blur intensity using the eye controller on the overlay strips.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Text(
+                                    "Blur/Frost mode obscures content instead of using a solid color. " +
+                                    "Control blur intensity using the eye controller on the overlay strips.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            if (!isHardwareBlurSupported) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                    Text(
+                                        "Hardware cross-window blur is disabled on this device by the OS/GPU vendor (MediaTek / power efficiency). GhostScreen automatically applies an enhanced frosted privacy tint with noise texture.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -361,6 +392,13 @@ fun SettingsScreen(
                         Icon(Icons.Default.SettingsSuggest, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                         Text("Behavior", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        BehaviorRow("Dynamic Color (Material You)", "Match app theme with system wallpaper colors", dynamicColorEnabled) {
+                            dynamicColorEnabled = it
+                            preferencesManager.isDynamicColorEnabled = it
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    }
                     BehaviorRow("Launch on boot", "Start background service automatically", launchOnBoot) { launchOnBoot = it; preferencesManager.isLaunchOnBootEnabled = it }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     BehaviorRow("Haptic feedback", "Vibrate on mask activation & controls", vibrateOnActivation) { vibrateOnActivation = it; preferencesManager.isVibrateOnActivationEnabled = it }
@@ -391,6 +429,30 @@ fun SettingsScreen(
                             }
                             Spacer(Modifier.height(8.dp))
                             Text("GhostScreen", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        Spacer(Modifier.height(4.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    val statusBarManager = context.getSystemService(android.app.StatusBarManager::class.java)
+                                    statusBarManager?.requestAddTileService(
+                                        android.content.ComponentName(context, com.etaegord.ghostscreen.service.GhostScreenTileService::class.java),
+                                        "GhostScreen",
+                                        android.graphics.drawable.Icon.createWithResource(context, com.etaegord.ghostscreen.R.drawable.ic_tile),
+                                        context.mainExecutor
+                                    ) { _ -> }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SettingsScreen", "requestAddTileService", e)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add Tile to Quick Settings", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

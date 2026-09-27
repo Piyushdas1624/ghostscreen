@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
@@ -13,7 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,6 +35,42 @@ class MainActivity : ComponentActivity() {
          * / settings / about. Ignored if absent (release builds never set it).
          */
         const val DEV_DEST_EXTRA = "dev.dest"
+
+        fun cleanupLegacyAliasesIfNeeded(context: Context) {
+            val prefs = context.getSharedPreferences("GhostScreenPrefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("legacy_aliases_cleaned_v2", false)) return
+
+            val pm = context.packageManager
+            val colors = listOf("Blue", "Red", "Green", "Purple")
+            for (c in colors) {
+                try {
+                    pm.setComponentEnabledSetting(
+                        ComponentName(context, "${context.packageName}.ui.MainAlias$c"),
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                    )
+                    pm.setComponentEnabledSetting(
+                        ComponentName(context, "${context.packageName}.ui.ShortcutAlias$c"),
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP
+                    )
+                } catch (_: Exception) {}
+            }
+            try {
+                pm.setComponentEnabledSetting(
+                    ComponentName(context, "${context.packageName}.ui.MainActivity"),
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+                pm.setComponentEnabledSetting(
+                    ComponentName(context, "${context.packageName}.ui.ShortcutActivity"),
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            } catch (_: Exception) {}
+
+            prefs.edit().putBoolean("legacy_aliases_cleaned_v2", true).apply()
+        }
     }
 
     private lateinit var preferencesManager: PreferencesManager
@@ -42,7 +79,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // setupRandomIconIfNeeded() removed to prevent app crash on first launch
+        cleanupLegacyAliasesIfNeeded(this)
 
         preferencesManager = PreferencesManager.getInstance(applicationContext)
         db = AppDatabase.getDatabase(applicationContext)
@@ -61,7 +98,20 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            GhostScreenTheme {
+            var isDynamicColor by remember { mutableStateOf(preferencesManager.isDynamicColorEnabled) }
+            DisposableEffect(preferencesManager) {
+                val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                    if (key == "dynamic_color") {
+                        isDynamicColor = preferencesManager.isDynamicColorEnabled
+                    }
+                }
+                preferencesManager.registerOnSharedPreferenceChangeListener(listener)
+                onDispose {
+                    preferencesManager.unregisterOnSharedPreferenceChangeListener(listener)
+                }
+            }
+
+            GhostScreenTheme(dynamicColor = isDynamicColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -74,34 +124,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    private fun setupRandomIconIfNeeded(context: Context) {
-        val prefs = context.getSharedPreferences("GhostScreenPrefs", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("icon_randomized", false)) return
-        
-        val colors = listOf("Blue", "Red", "Green", "Purple")
-        val chosen = colors.random()
-        
-        val pm = context.packageManager
-        
-        for (c in colors) {
-            val state = if (c == chosen) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            pm.setComponentEnabledSetting(
-                ComponentName(context, "${context.packageName}.ui.MainAlias$c"),
-                state,
-                PackageManager.DONT_KILL_APP
-            )
-            pm.setComponentEnabledSetting(
-                ComponentName(context, "${context.packageName}.ui.ShortcutAlias$c"),
-                state,
-                PackageManager.DONT_KILL_APP
-            )
-        }
-        
-        prefs.edit().putBoolean("icon_randomized", true).apply()
-        
-        android.widget.Toast.makeText(context, "Icon randomized! Please reopen the app.", android.widget.Toast.LENGTH_LONG).show()
     }
 }
 
