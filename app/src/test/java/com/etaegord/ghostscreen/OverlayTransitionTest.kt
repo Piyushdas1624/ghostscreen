@@ -126,5 +126,22 @@ class OverlayTransitionTest {
         assertTrue(OverlayTransition.isTransient("com.google.android.gboard"))
         assertTrue(OverlayTransition.isTransient("android"))
         assertTrue(!OverlayTransition.isTransient("com.whatsapp"))
+        assertTrue(!OverlayTransition.isTransient("com.transsion.xoslauncher"))
+        assertTrue(!OverlayTransition.isTransient("com.sec.android.app.launcher"))
+        assertTrue(!OverlayTransition.isTransient("com.miui.home"))
+        assertTrue(!OverlayTransition.isTransient("com.google.android.apps.nexuslauncher"))
+    }
+
+    @Test
+    fun launcher_after_protected_app_hides_overlay() {
+        val d = OverlayTransition.decide(
+            currentPackage = "com.transsion.xoslauncher",
+            isTransient = OverlayTransition.isTransient("com.transsion.xoslauncher"),
+            isProtected = false,
+            lastEffectiveProtected = "com.whatsapp",
+            armed = true,
+            manualOverride = false
+        )
+        assertEquals(Decision.HIDE, d)
     }
 }

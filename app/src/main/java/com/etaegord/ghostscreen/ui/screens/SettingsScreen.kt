@@ -1,6 +1,10 @@
 package com.etaegord.ghostscreen.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -22,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -118,13 +123,46 @@ fun SettingsScreen(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     ) {
+                        val solidBg by animateColorAsState(
+                            targetValue = if (!blurEnabled) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "solidBg"
+                        )
+                        val solidFg by animateColorAsState(
+                            targetValue = if (!blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "solidFg"
+                        )
+                        val blurBg by animateColorAsState(
+                            targetValue = if (blurEnabled) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "blurBg"
+                        )
+                        val blurFg by animateColorAsState(
+                            targetValue = if (blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "blurFg"
+                        )
+
                         // Solid Color chip
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(CircleShape)
-                                .background(if (!blurEnabled) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .background(solidBg)
                                 .clickable {
                                     blurEnabled = false
                                     preferencesManager.isBlurEnabled = false
@@ -133,11 +171,11 @@ fun SettingsScreen(
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Circle, null,
-                                    tint = if (!blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = solidFg,
                                     modifier = Modifier.size(14.dp))
                                 Text("Solid Color",
                                     style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                                    color = if (!blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    color = solidFg)
                             }
                         }
                         // Blur chip
@@ -146,7 +184,7 @@ fun SettingsScreen(
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(CircleShape)
-                                .background(if (blurEnabled) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .background(blurBg)
                                 .clickable {
                                     blurEnabled = true
                                     preferencesManager.isBlurEnabled = true
@@ -155,11 +193,11 @@ fun SettingsScreen(
                         ) {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.BlurOn, null,
-                                    tint = if (blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = blurFg,
                                     modifier = Modifier.size(14.dp))
                                 Text("Blur / Frost",
                                     style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                                    color = if (blurEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    color = blurFg)
                             }
                         }
                     }
@@ -221,8 +259,16 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp)
                             ) {
-                                itemsIndexed(presets) { _, swatch ->
+                                itemsIndexed(presets, key = { _, swatch -> swatch.hex }) { _, swatch ->
                                     val isSelected = overlayColor.equals(swatch.hex, true)
+                                    val swatchScale by animateFloatAsState(
+                                        targetValue = if (isSelected) 1.15f else 1.0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "swatchScale_${swatch.hex}"
+                                    )
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -233,7 +279,11 @@ fun SettingsScreen(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(if (isSelected) 58.dp else 48.dp)
+                                                .size(52.dp)
+                                                .graphicsLayer {
+                                                    scaleX = swatchScale
+                                                    scaleY = swatchScale
+                                                }
                                                 .clip(CircleShape)
                                                 .background(swatch.color)
                                                 .border(
@@ -256,6 +306,14 @@ fun SettingsScreen(
                                 // Custom swatch at the end
                                 item {
                                     val customActive = !presets.any { it.hex.equals(overlayColor, true) }
+                                    val customScale by animateFloatAsState(
+                                        targetValue = if (customActive) 1.15f else 1.0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "customScale"
+                                    )
                                     val customColor = if (customActive) try { Color(android.graphics.Color.parseColor(overlayColor)) } catch (_: Exception) { MaterialTheme.colorScheme.secondaryContainer } else MaterialTheme.colorScheme.secondaryContainer
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -264,7 +322,11 @@ fun SettingsScreen(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(if (customActive) 58.dp else 48.dp)
+                                                .size(52.dp)
+                                                .graphicsLayer {
+                                                    scaleX = customScale
+                                                    scaleY = customScale
+                                                }
                                                 .clip(CircleShape)
                                                 .background(customColor)
                                                 .border(
@@ -391,7 +453,7 @@ private fun ColorPickerDialog(
                 // Presets
                 Text("Presets", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(presets) { _, (name, hex) ->
+                    itemsIndexed(presets, key = { _, pair -> pair.second }) { _, (name, hex) ->
                         val cv = try { Color(android.graphics.Color.parseColor(hex)) } catch (_: Exception) { Color.Black }
                         val sel = selPreset.equals(hex, true)
                         Box(

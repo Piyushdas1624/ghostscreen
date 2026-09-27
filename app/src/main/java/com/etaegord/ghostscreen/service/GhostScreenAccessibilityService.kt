@@ -43,6 +43,8 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 }
             } else if (!isArmed) {
                 // Fully disarmed -> hide.
+                pendingCheckJob?.cancel()
+                hideJob?.cancel()
                 overlayShownForPackage = null
                 lastProtectedPackage = null
                 overlay?.hide()
@@ -53,10 +55,12 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 // then re-evaluate the real current app.
                 overlayShownForPackage = null
                 overlay?.hide()
-                currentPackageName?.let { pkg ->
+                val pkg = currentPackageName ?: rootInActiveWindow?.packageName?.toString()
+                pkg?.let { targetPkg ->
+                    currentPackageName = targetPkg
                     pendingCheckJob?.cancel()
                     pendingCheckJob = serviceScope.launch {
-                        checkCurrentApp(pkg)
+                        checkCurrentApp(targetPkg)
                     }
                 }
             }
@@ -80,6 +84,15 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         if (preferencesManager.isManualOverrideActive) {
             overlayShownForPackage = "manual"
             overlay?.show()
+        } else if (preferencesManager.isArmed) {
+            val pkg = rootInActiveWindow?.packageName?.toString()
+            if (pkg != null) {
+                currentPackageName = pkg
+                pendingCheckJob?.cancel()
+                pendingCheckJob = serviceScope.launch {
+                    checkCurrentApp(pkg)
+                }
+            }
         }
     }
 
@@ -159,7 +172,7 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 OverlayTransition.Decision.SHOW -> {
                     hideJob?.cancel()
                     val tag = if (preferencesManager.isManualOverrideActive) "manual" else effectivePackage
-                    if (tag != null && overlayShownForPackage != tag) {
+                    if (tag != null && (overlayShownForPackage != tag || overlay?.isShowing() != true)) {
                         Log.d(TAG, "Showing overlay for $tag")
                         overlayShownForPackage = tag
                         // Remember the protected real app so transient surfaces can inherit it.

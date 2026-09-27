@@ -31,12 +31,15 @@ import androidx.compose.ui.unit.sp
 import com.etaegord.ghostscreen.data.AppDatabase
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -156,7 +159,21 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(top = 8.dp)
             ) {
-                if (!isOverlayGranted) {
+                AnimatedVisibility(
+                    visible = !isOverlayGranted,
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(),
+                    exit = shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeOut()
+                ) {
                     StatusWarningBanner(
                         title = "Overlay Permission Missing",
                         subtitle = "Tap to grant permission to draw the privacy mask.",
@@ -169,7 +186,21 @@ fun HomeScreen(
                         }
                     )
                 }
-                if (!isAccessibilityGranted) {
+                AnimatedVisibility(
+                    visible = !isAccessibilityGranted,
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(),
+                    exit = shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeOut()
+                ) {
                     StatusWarningBanner(
                         title = "Accessibility Service Disabled",
                         subtitle = "Required to auto-detect and protect apps.",
@@ -182,9 +213,21 @@ fun HomeScreen(
             }
 
             // Status Chip
+            val statusChipScale by animateFloatAsState(
+                targetValue = if (isArmed) 1.05f else 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "statusChipScale"
+            )
             Box(
                 modifier = Modifier
                     .padding(top = 8.dp)
+                    .graphicsLayer {
+                        scaleX = statusChipScale
+                        scaleY = statusChipScale
+                    }
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .padding(horizontal = 20.dp, vertical = 8.dp)
@@ -266,12 +309,33 @@ fun HomeScreen(
                         val toggleColorTarget = if (isArmed) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceContainerHigh
                         
-                        // We use the basic animateColorAsState here since it's just a click transition,
-                        // not a continuous loop.
-                        val animColor by androidx.compose.animation.animateColorAsState(
+                        val animColor by animateColorAsState(
                             targetValue = toggleColorTarget,
-                            animationSpec = androidx.compose.animation.core.tween(400),
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
                             label = "toggleColor"
+                        )
+
+                        val powerInteractionSource = remember { MutableInteractionSource() }
+                        val isPowerPressed by powerInteractionSource.collectIsPressedAsState()
+                        val powerCardScale by animateFloatAsState(
+                            targetValue = if (isPowerPressed) 0.93f else 1.0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "powerCardScale"
+                        )
+
+                        val iconRotation by animateFloatAsState(
+                            targetValue = if (isArmed) 360f else 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "iconRotation"
                         )
 
                         Card(
@@ -292,8 +356,13 @@ fun HomeScreen(
                                 preferencesManager.isArmed = newArmed
                                 isArmed = newArmed
                             },
+                            interactionSource = powerInteractionSource,
                             modifier = Modifier
                                 .size(160.dp)
+                                .graphicsLayer {
+                                    scaleX = powerCardScale
+                                    scaleY = powerCardScale
+                                }
                                 .border(
                                     width = if (isArmed) 3.dp else 2.dp,
                                     color = if (isArmed) primaryColor
@@ -319,7 +388,11 @@ fun HomeScreen(
                                         contentDescription = if (isArmed) "Disarm" else "Arm",
                                         tint = if (isArmed) MaterialTheme.colorScheme.onPrimaryContainer
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .graphicsLayer {
+                                                rotationZ = iconRotation
+                                            }
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
@@ -338,9 +411,25 @@ fun HomeScreen(
             }
 
             // Smart Mask Card
+            val smartMaskInteraction = remember { MutableInteractionSource() }
+            val isSmartMaskPressed by smartMaskInteraction.collectIsPressedAsState()
+            val smartMaskScale by animateFloatAsState(
+                targetValue = if (isSmartMaskPressed) 0.97f else 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "smartMaskScale"
+            )
             Card(
                 onClick = onNavigateToSmartMask,
-                modifier = Modifier.fillMaxWidth(),
+                interactionSource = smartMaskInteraction,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = smartMaskScale
+                        scaleY = smartMaskScale
+                    },
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -476,9 +565,26 @@ fun StatCard(
     containerColor: Color,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "statCardScale"
+    )
+
     Card(
         onClick = onClick,
-        modifier = modifier.height(120.dp),
+        interactionSource = interactionSource,
+        modifier = modifier
+            .height(120.dp)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {

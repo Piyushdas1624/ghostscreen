@@ -9,8 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * PreferencesManager with lazy-initialized EncryptedSharedPreferences.
@@ -22,13 +20,14 @@ import kotlinx.coroutines.sync.withLock
  * then async-migrate to encrypted prefs once Tink is ready. Writes go to both.
  */
 class PreferencesManager(context: Context) {
+    private val appContext: Context = context.applicationContext
     private val plainPrefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME_PLAIN, Context.MODE_PRIVATE)
+        appContext.getSharedPreferences(PREFS_NAME_PLAIN, Context.MODE_PRIVATE)
 
     // Encrypted prefs are initialized lazily on a background thread
     @Volatile
     private var encryptedPrefs: SharedPreferences? = null
-    private val initMutex = Mutex()
+    private val syncLock = Any()
 
     companion object {
         private const val TAG = "PreferencesManager"
@@ -63,7 +62,6 @@ class PreferencesManager(context: Context) {
 
     init {
         // Initialize encrypted prefs on background thread to avoid blocking UI.
-        val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             val ePrefs = try {
                 createEncryptedPrefs(appContext)
@@ -91,20 +89,22 @@ class PreferencesManager(context: Context) {
             // written to plainPrefs BEFORE encryptedPrefs was ready (or while it
             // was broken) is replayed here, so reads can safely flip to the
             // encrypted store without reverting recent user changes.
-            val editor = ePrefs.edit()
-            plainPrefs.all.forEach { (key, value) ->
-                when (value) {
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Int -> editor.putInt(key, value)
-                    is Float -> editor.putFloat(key, value)
-                    is String -> editor.putString(key, value)
-                    is Long -> editor.putLong(key, value)
+            synchronized(syncLock) {
+                val editor = ePrefs.edit()
+                plainPrefs.all.forEach { (key, value) ->
+                    when (value) {
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Float -> editor.putFloat(key, value)
+                        is String -> editor.putString(key, value)
+                        is Long -> editor.putLong(key, value)
+                    }
                 }
-            }
-            editor.putBoolean(KEY_MIGRATED, true)
-            editor.apply()
+                editor.putBoolean(KEY_MIGRATED, true)
+                editor.apply()
 
-            encryptedPrefs = ePrefs
+                encryptedPrefs = ePrefs
+            }
             Log.d(TAG, "Encrypted prefs initialized successfully")
         }
     }
@@ -139,8 +139,10 @@ class PreferencesManager(context: Context) {
 
     /** Write to both plain (instant) and encrypted (when ready) */
     private fun edit(block: SharedPreferences.Editor.() -> Unit) {
-        plainPrefs.edit().apply { block() }.apply()
-        encryptedPrefs?.edit()?.apply { block() }?.apply()
+        synchronized(syncLock) {
+            plainPrefs.edit().apply { block() }.apply()
+            encryptedPrefs?.edit()?.apply { block() }?.apply()
+        }
     }
 
     var isArmed: Boolean
@@ -149,7 +151,19 @@ class PreferencesManager(context: Context) {
 
     var isManualOverrideActive: Boolean
         get() = prefs.getBoolean(KEY_MANUAL_OVERRIDE, false)
-        set(value) = edit { putBoolean(KEY_MANUAL_OVERRIDE, value) }
+        set(value) {
+            edit { putBoolean(KEY_MANUAL_OVERRIDE, value) }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                try {
+                    android.service.quicksettings.TileService.requestListeningState(
+                        appContext,
+                        android.content.ComponentName(appContext, "com.etaegord.ghostscreen.service.GhostScreenTileService")
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to request tile listening state", e)
+                }
+            }
+        }
 
     var transparency: Int
         get() = prefs.getInt(KEY_TRANSPARENCY, 75)

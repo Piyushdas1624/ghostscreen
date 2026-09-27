@@ -37,7 +37,7 @@ object OverlayTransition {
         return if (isProtected) Decision.SHOW else Decision.HIDE
     }
 
-    /** True for System UI / notification shade / IME (keyboard) / launcher animation packages. */
+    /** True for System UI / notification shade / IME (keyboard) packages. */
     fun isTransient(packageName: String): Boolean {
         val p = packageName.lowercase()
         return p == "android" ||
@@ -52,12 +52,6 @@ object OverlayTransition {
             p.contains("aitype") ||
             p.contains("ai.type") ||
             p.contains("gboard") ||
-            p.contains("ime.") ||
-            // ponytail: OEM launchers fire TYPE_WINDOW_STATE_CHANGED during app-switch
-            // animations. Without these the overlay flickers off/on on those devices.
-            p.contains("launcher") ||
-            p.contains("home") ||
-            p == "com.sec.android.app.launcher" ||
-            p == "com.miui.home"
+            p.contains("ime.")
     }
 }
