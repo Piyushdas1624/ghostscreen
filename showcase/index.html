@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GhostScreen — Next-Gen Privacy & UI Showcase</title>
+  <style>
+    :root {
+      --md-primary: #8b5cf6;
+      --md-primary-container: #4c1d95;
+      --md-on-primary-container: #ede9fe;
+      --md-surface: #0f1117;
+      --md-surface-card: #181b24;
+      --md-surface-low: #13151e;
+      --md-surface-high: #222634;
+      --md-text: #f3f4f6;
+      --md-text-muted: #9ca3af;
+      --md-accent: #a78bfa;
+      --md-accent-glow: rgba(139, 92, 246, 0.35);
+      --md-danger: #ef4444;
+      --md-success: #10b981;
+      --md-warning: #f59e0b;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--md-surface);
+      color: var(--md-text);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px var(--md-accent-glow);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #fff, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-header {
+      background: var(--md-surface-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-header:hover {
+      background: var(--md-surface-high);
+      border-color: var(--md-accent);
+      color: #fff;
+    }
+
+    /* Main Container Grid */
+    main {
+      flex: 1;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Phone Mockup Frame */
+    .phone-column {
+      position: sticky;
+      top: 96px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      perspective: 1200px;
+    }
+
+    .phone-device {
+      width: 360px;
+      height: 740px;
+      background: #000;
+      border-radius: 46px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 10px #1e2029, 0 0 0 12px #2d3142;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* 3D Tilt Away Simulation */
+    .phone-device.tilted {
+      transform: rotate3d(0.4, -1, 0.2, 52deg) scale(0.95);
+      box-shadow: 30px 40px 80px rgba(0, 0, 0, 0.95), 0 0 0 10px #1e2029;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background: #080808;
+      border-radius: 50%;
+      z-index: 50;
+      box-shadow: inset 0 0 2px #333;
+    }
+
+    .phone-status-bar {
+      height: 34px;
+      padding: 8px 24px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      z-index: 40;
+      background: transparent;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phone-screen {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #090a0f;
+    }
+
+    /* Target App Mockups inside Phone */
+    .app-screen {
+      position: absolute;
+      inset: 0;
+      padding: 12px 18px 20px 18px;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .app-screen::-webkit-scrollbar {
+      display: none;
+    }
+
+    .app-screen.active {
+      display: flex;
+    }
+
+    /* App 1: Banking Dashboard */
+    .bank-card {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .bank-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #c7d2fe;
+    }
+
+    .bank-balance {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin: 12px 0 4px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .bank-account {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #a5b4fc;
+      letter-spacing: 0.1em;
+    }
+
+    .txn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .txn-item {
+      background: #141722;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .txn-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .txn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .txn-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .txn-date {
+      font-size: 0.7rem;
+      color: var(--md-text-muted);
+    }
+
+    .txn-amount {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* App 2: Secure Chat */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
+    }
+
+    .chat-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #e11d48;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .chat-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .chat-status {
+      font-size: 0.7rem;
+      color: #10b981;
+    }
+
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .bubble-them {
+      align-self: flex-start;
+      background: #1f2433;
+      border-bottom-left-radius: 4px;
+      color: #e2e8f0;
+    }
+
+    .bubble-me {
+      align-self: flex-end;
+      background: #7c3aed;
+      border-bottom-right-radius: 4px;
+      color: #fff;
+    }
+
+    /* App 3: Authenticator / 2FA */
+    .auth-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .auth-item {
+      background: #151824;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .auth-issuer {
+      font-size: 0.75rem;
+      color: var(--md-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-account {
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .auth-code {
+      font-family: monospace;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: #38bdf8;
+    }
+
+    /* App 4: GhostScreen Home */
+    .gs-app-card {
+      background: var(--md-surface-card);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .gs-master-switch {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ========================================================
+       LIVE GHOSTSCREEN OVERLAY ENGINE
+       ======================================================== */
+    .overlay-container {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: auto;
+      overflow: hidden;
+      transition: opacity 0.25s ease;
+    }
+
+    /* 4 Mask Edge Windows for Box Mode */
+    .mask-edge {
+      position: absolute;
+      background: #000;
+      pointer-events: auto;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .mask-top    { top: 0; left: 0; right: 0; }
+    .mask-bottom { bottom: 0; left: 0; right: 0; }
+    .mask-left   { left: 0; }
+    .mask-right  { right: 0; }
+
+    /* The Center Viewport (Hollow touch passthrough) */
+    .viewport-box {
+      position: absolute;
+      pointer-events: none;
+      border: 2px solid var(--md-accent);
+      border-radius: 8px;
+      box-shadow: 0 0 18px rgba(139, 92, 246, 0.4), inset 0 0 10px rgba(139, 92, 246, 0.2);
+      transition: border-color 0.2s ease;
+    }
+
+    /* Corner Drag Handles */
+    .corner-handle {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--md-accent);
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+      cursor: grab;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      z-index: 35;
+      transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+
+    .corner-handle:active {
+      cursor: grabbing;
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+
+    .corner-handle::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 50%;
+    }
+
+    /* Floating Opacity Droplet Badge */
+    .drop-badge {
+      position: absolute;
+      bottom: 24px;
+      right: 20px;
+      background: rgba(24, 27, 36, 0.95);
+      border: 1.5px solid var(--md-accent);
+      border-radius: 999px;
+      padding: 6px 14px 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      z-index: 38;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .drop-badge:hover {
+      transform: scale(1.05);
+    }
+
+    .drop-icon {
+      width: 14px;
+      height: 14px;
+      fill: var(--md-accent);
+    }
+
+    .drop-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Alternate Mode 1: Split Strip Mode */
+    .split-strip {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: #000;
+      pointer-events: auto;
+      display: none;
+    }
+
+    .split-top { top: 0; }
+    .split-bottom { bottom: 0; }
+
+    .split-bar {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 3px;
+    }
+
+    /* Alternate Mode 2: Spotlight / Circle Torch */
+    .spotlight-mask {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+    }
+
+    /* Alternate Mode 3: Dynamic Pill / Island Peek */
+    .pill-viewport {
+      position: absolute;
+      border-radius: 999px;
+      border: 2px solid var(--md-accent);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+      pointer-events: none;
+      display: none;
+    }
+
+    /* AI Field Highlight Shield Mini-Overlay */
+    .ai-field-shield {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.95);
+      border: 1px dashed var(--md-accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--md-accent);
+      z-index: 32;
+      pointer-events: auto;
+      cursor: pointer;
+      animation: pulseField 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseField {
+      0%, 100% { border-color: var(--md-accent); }
+      50% { border-color: rgba(255, 255, 255, 0.4); }
+    }
+
+    /* Gesture Home Navigation Bar */
+    .phone-nav-bar {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    .home-pill {
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+    }
+
+    /* Right Column: Interactive Studio & Idea Showcase */
+    .studio-column {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-subtitle {
+      font-size: 0.9rem;
+      color: var(--md-text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* Card Panels */
+    .panel-card {
+      background: var(--md-surface-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Controls Grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--md-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Mode Pill Buttons */
+    .mode-selector {
+      display: flex;
+      background: var(--md-surface-low);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      flex: 1;
+      min-width: 90px;
+      background: transparent;
+      border: none;
+      color: var(--md-text-muted);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .mode-btn.active {
+      background: var(--md-primary);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--md-accent-glow);
+    }
+
+    /* Slider styling */
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--md-surface-high);
+      outline: none;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--md-accent);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+    }
+
+    .slider-val {
+      min-width: 44px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--md-accent);
+    }
+
+    /* Preset & Sensor Simulation Triggers */
+    .action-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      background: var(--md-surface-low);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .chip-btn:hover {
+      background: var(--md-surface-high);
+      border-color: var(--md-accent);
+    }
+
+    .chip-btn.active {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      border-color: var(--md-primary);
+    }
+
+    /* Ideas & Concepts Feature Cards */
+    .ideas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 16px;
+    }
+
+    .idea-card {
+      background: var(--md-surface-low);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .idea-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .idea-badge {
+      align-self: flex-start;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-innovative { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+    .badge-sensor { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .badge-ai { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+    .badge-ui { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
+
+    .idea-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .idea-desc {
+      font-size: 0.85rem;
+      color: var(--md-text-muted);
+      line-height: 1.5;
+    }
+
+    .idea-meta {
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    .idea-try-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .idea-try-btn:hover {
+      background: var(--md-primary);
+      color: #fff;
+    }
+
+    /* Notification Toast */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1b4b;
+      border: 1px solid var(--md-accent);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast-msg.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Texture Patterns */
+    .texture-louver {
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.98),
+        rgba(0, 0, 0, 0.98) 3px,
+        rgba(20, 20, 30, 0.95) 3px,
+        rgba(20, 20, 30, 0.95) 6px
+      ) !important;
+    }
+
+    .texture-matrix {
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 10%, transparent 11%), #000 !important;
+      background-size: 8px 8px !important;
+    }
+
+    .texture-noise {
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px), #0b0c10 !important;
+      background-size: 4px 4px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.38 1.04-4.52 2.7-6l2.12 2.12C7.68 9.17 7 10.49 7 12c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.51-.68-2.83-1.82-3.88L17.3 6C18.96 7.48 20 9.62 20 12c0 4.41-3.59 8-8 8z"/>
+        </svg>
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="brand-title">GhostScreen</span>
+          <span class="brand-badge">Innovation Lab</span>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--md-text-muted);">Interactive Architectural UI & Feature Prototype</div>
+      </div>
+    </div>
+    <div class="header-links">
+      <button class="btn-header" onclick="triggerPanicCloak()">
+        <span>🛡️ Panic Cloak</span>
+      </button>
+      <button class="btn-header" onclick="togglePhoneTilt()">
+        <span>📐 Test Tilt Sensor</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main>
+    <!-- Left Column: Interactive Phone Mockup -->
+    <div class="phone-column">
+      <div class="phone-device" id="phoneDevice">
+        <!-- Punch-hole front camera -->
+        <div class="phone-notch"></div>
+
+        <!-- Android Status Bar -->
+        <div class="phone-status-bar">
+          <span id="phoneClock">21:52</span>
+          <div class="status-icons">
+            <span>5G</span>
+            <span>98%</span>
+          </div>
+        </div>
+
+        <!-- Phone Screen with Simulated Target Apps -->
+        <div class="phone-screen" id="phoneScreen">
+
+          <!-- APP 1: Banking Dashboard -->
+          <div class="app-screen active" id="appBank">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <span style="font-weight: 700; font-size: 0.95rem;">VaultBank Mobile</span>
+              <span style="font-size: 0.75rem; color: #a5b4fc;">● Protected</span>
+            </div>
+            <div class="bank-card" id="bankBalanceCard">
+              <div class="bank-header">
+                <span>TOTAL CHECKING</span>
+                <span>VISA PLATINUM</span>
+              </div>
+              <div class="bank-balance" id="bankBalanceText">$28,490.50</div>
+              <div class="bank-account" id="bankCardNum">•••• •••• •••• 9241</div>
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 8px;">RECENT TRANSACTIONS</div>
+            <div class="txn-list">
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">💎</div>
+                  <div>
+                    <div class="txn-name">Emerald Security Ltd</div>
+                    <div class="txn-date">Today, 18:30</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #ef4444;">-$2,450.00</div>
+              </div>
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">💼</div>
+                  <div>
+                    <div class="txn-name">Client Wire Transfer</div>
+                    <div class="txn-date">Yesterday, 14:15</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #10b981;">+$9,200.00</div>
+              </div>
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">☕</div>
+                  <div>
+                    <div class="txn-name">Artisan Roast Co</div>
+                    <div class="txn-date">24 Sep, 09:12</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #ef4444;">-$6.40</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- APP 2: Secret Chat -->
+          <div class="app-screen" id="appChat">
+            <div class="chat-header">
+              <div class="chat-avatar">S</div>
+              <div>
+                <div class="chat-name">Sarah Vance (Encrypted)</div>
+                <div class="chat-status">● End-to-end Signal protocol</div>
+              </div>
+            </div>
+            <div class="chat-messages">
+              <div class="chat-bubble bubble-them">
+                Hey, did you review the Q4 financial audit files? Don't leave them open in public transit.
+              </div>
+              <div class="chat-bubble bubble-me">
+                Yeah, keeping GhostScreen active right now.
+              </div>
+              <div class="chat-bubble bubble-them" id="chatOtpBubble">
+                Your emergency one-time auth code for the cold vault is: <strong style="color: #38bdf8;">894-112</strong>
+              </div>
+              <div class="chat-bubble bubble-me">
+                Received. Destroying record now.
+              </div>
+            </div>
+          </div>
+
+          <!-- APP 3: 2FA Authenticator -->
+          <div class="app-screen" id="appAuth">
+            <div class="auth-title">Security Keys (2FA)</div>
+            <div class="auth-item" id="authItem1">
+              <div class="auth-issuer">Binance Exchange</div>
+              <div class="auth-account">user@etaegord.internal</div>
+              <div class="auth-code">739 204</div>
+            </div>
+            <div class="auth-item" id="authItem2">
+              <div class="auth-issuer">GitHub Enterprise</div>
+              <div class="auth-account">piyushdas1624</div>
+              <div class="auth-code">582 911</div>
+            </div>
+            <div class="auth-item">
+              <div class="auth-issuer">ProtonMail Secure</div>
+              <div class="auth-account">vault@proton.me</div>
+              <div class="auth-code">410 827</div>
+            </div>
+          </div>
+
+          <!-- APP 4: GhostScreen Home Dashboard -->
+          <div class="app-screen" id="appGhost">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div>
+                <div style="font-weight: 700; font-size: 1.1rem;">GhostScreen</div>
+                <div style="font-size: 0.72rem; color: #a78bfa;">Status: ARMED & RUNNING</div>
+              </div>
+              <div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></div>
+            </div>
+
+            <!-- Instant Mask Quick Action Card (New M4 design) -->
+            <div class="gs-app-card" style="background: linear-gradient(135deg, #2e1065, #4c1d95); border-color: #7c3aed; cursor: pointer;" onclick="toggleOverlay()">
+              <div class="gs-master-switch">
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem; color: #fff;">Instant Manual Mask</div>
+                  <div style="font-size: 0.72rem; color: #ddd6fe;" id="mockupCardSub">Tap to Toggle Overlay Now</div>
+                </div>
+                <div style="font-size: 1.2rem;">👁️</div>
+              </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+              <div class="gs-app-card" style="padding: 12px; margin: 0;">
+                <div style="font-size: 0.7rem; color: #94a3b8;">Protected Apps</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">6 Active</div>
+              </div>
+              <div class="gs-app-card" style="padding: 12px; margin: 0;">
+                <div style="font-size: 0.7rem; color: #94a3b8;">Audit Events</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">42 Logged</div>
+              </div>
+            </div>
+
+            <!-- In-App Sliders Preview -->
+            <div class="gs-app-card">
+              <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 8px;">Overlay Transparency</div>
+              <input type="range" min="10" max="100" value="85" style="width: 100%;" oninput="updateOpacity(this.value)">
+            </div>
+          </div>
+
+          <!-- ========================================================
+               LIVE OVERLAY LAYER (Simulating Invariant I1 - I6)
+               ======================================================== -->
+          <div class="overlay-container" id="ghostOverlay">
+            
+            <!-- Box Mode Mask Windows (Top, Bottom, Left, Right) -->
+            <div class="mask-edge mask-top" id="maskTop"></div>
+            <div class="mask-edge mask-bottom" id="maskBottom"></div>
+            <div class="mask-edge mask-left" id="maskLeft"></div>
+            <div class="mask-edge mask-right" id="maskRight"></div>
+
+            <!-- Center Viewport (Empty touch passthrough) -->
+            <div class="viewport-box" id="viewportBox"></div>
+
+            <!-- 4 Drag Handles -->
+            <div class="corner-handle" id="handleTL"></div>
+            <div class="corner-handle" id="handleTR"></div>
+            <div class="corner-handle" id="handleBL"></div>
+            <div class="corner-handle" id="handleBR"></div>
+
+            <!-- Split Strip Mode Windows -->
+            <div class="split-strip split-top" id="splitTop">
+              <div class="split-bar" style="bottom: 8px;"></div>
+            </div>
+            <div class="split-strip split-bottom" id="splitBottom">
+              <div class="split-bar" style="top: 8px;"></div>
+            </div>
+
+            <!-- Circular Spotlight Torch Mode -->
+            <div class="spotlight-mask" id="spotlightMask"></div>
+
+            <!-- Pill Peek Mode -->
+            <div class="pill-viewport" id="pillViewport"></div>
+
+            <!-- Droplet Badge (Dynamic M3 Expressive) -->
+            <div class="drop-badge" id="dropBadge" onclick="cycleOpacity()">
+              <svg class="drop-icon" viewBox="0 0 24 24">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+              </svg>
+              <span class="drop-label" id="dropLabel">85%</span>
+            </div>
+
+            <!-- Dynamic AI Field Shields Container -->
+            <div id="aiShieldsContainer"></div>
+          </div>
+
+        </div>
+
+        <!-- Android 3-Button / Gesture Bar -->
+        <div class="phone-nav-bar">
+          <div class="home-pill"></div>
+        </div>
+      </div>
+
+      <!-- App Switcher Toolbar under Phone -->
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button class="chip-btn active" onclick="switchApp('appBank', this)">🏦 Banking</button>
+        <button class="chip-btn" onclick="switchApp('appChat', this)">💬 Chat</button>
+        <button class="chip-btn" onclick="switchApp('appAuth', this)">🔑 2FA Keys</button>
+        <button class="chip-btn" onclick="switchApp('appGhost', this)">👻 GS App</button>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Studio, Feature Lab & Technical Insights -->
+    <div class="studio-column">
+      
+      <!-- Section 1: Live Interactive Controls -->
+      <div class="panel-card">
+        <div class="section-title">
+          <span>🎛️ Privacy Overlay Controller</span>
+        </div>
+        <div class="section-subtitle">
+          Test GhostScreen's real-time overlay geometry, responsive canvas shaders, and Material 3 Expressive tokens directly on the simulated device.
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Viewport Privacy Geometry Mode</label>
+          <div class="mode-selector">
+            <button class="mode-btn active" id="btnModeBox" onclick="setMode('box')">
+              <span>🔲 Box Mode</span>
+            </button>
+            <button class="mode-btn" id="btnModeSplit" onclick="setMode('split')">
+              <span>↕️ Split Slit</span>
+            </button>
+            <button class="mode-btn" id="btnModeSpotlight" onclick="setMode('spotlight')">
+              <span>🔦 Spotlight Torch</span>
+            </button>
+            <button class="mode-btn" id="btnModePill" onclick="setMode('pill')">
+              <span>💊 Island Pill</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="controls-grid" style="margin-top: 20px;">
+          <div class="control-group">
+            <label class="control-label">Mask Density / Opacity</label>
+            <div class="slider-container">
+              <input type="range" id="opacitySlider" min="10" max="100" value="85" oninput="updateOpacity(this.value)">
+              <span class="slider-val" id="opacityVal">85%</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Privacy Texture & Shader</label>
+            <div class="action-chips">
+              <button class="chip-btn active" onclick="setTexture('solid', this)">OLED Black</button>
+              <button class="chip-btn" onclick="setTexture('louver', this)">3M Louver</button>
+              <button class="chip-btn" onclick="setTexture('matrix', this)">Cyber Matrix</button>
+              <button class="chip-btn" onclick="setTexture('noise', this)">Dither Noise</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-grid" style="margin-top: 16px;">
+          <div class="control-group">
+            <label class="control-label">Material 3 Expressive Accent Palette</label>
+            <div class="action-chips">
+              <button class="chip-btn active" onclick="setAccentTheme('#8b5cf6', '#a78bfa', this)">Violet Twilight</button>
+              <button class="chip-btn" onclick="setAccentTheme('#06b6d4', '#22d3ee', this)">Electric Cyan</button>
+              <button class="chip-btn" onclick="setAccentTheme('#10b981', '#34d399', this)">Emerald Aegis</button>
+              <button class="chip-btn" onclick="setAccentTheme('#f97316', '#fb923c', this)">Amber Sun</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Rapid Preset Shortcuts</label>
+            <div class="action-chips">
+              <button class="chip-btn" onclick="applyPreset('transit')">🚆 Metro / Transit</button>
+              <button class="chip-btn" onclick="applyPreset('atm')">🏧 ATM / Checkout</button>
+              <button class="chip-btn" onclick="applyPreset('reading')">📖 Reading Slit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Smart Sensor & AI Concept Demos -->
+      <div class="panel-card">
+        <div class="section-title">
+          <span>🧠 Context-Aware Shielding & Sensor Triggers</span>
+        </div>
+        <div class="section-subtitle">
+          Next-generation capabilities that operate 100% offline, zero-telemetry, and preserve GhostScreen's locked invariants.
+        </div>
+
+        <div class="action-chips">
+          <button class="chip-btn" id="btnTiltTrigger" onclick="togglePhoneTilt()">
+            <span>📐 Gyroscope Shoulder-Surfer Tilt Shield</span>
+          </button>
+          <button class="chip-btn" id="btnAiScan" onclick="triggerAiFieldDetection()">
+            <span>✨ AI Sensitive Field Auto-Shielding</span>
+          </button>
+          <button class="chip-btn" onclick="simulateQuickSettingsToggle()">
+            <span>📲 Quick Settings Instant Toggle</span>
+          </button>
+          <button class="chip-btn" onclick="triggerPanicCloak()">
+            <span>🚨 Panic Double-Shake Disguise</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 3: Feature Roadmap & Architectural Deep-Dives -->
+      <div>
+        <div class="section-title">
+          <span>💡 High-Impact Feature & UI Proposals</span>
+        </div>
+        <div class="section-subtitle">
+          Detailed engineering analysis for features that can be added into the Kotlin codebase.
+        </div>
+
+        <div class="ideas-grid">
+          
+          <!-- Idea 1 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-innovative">New Geometry</div>
+            <div class="idea-title">
+              <span>Dynamic Island / Pill Peek Mode</span>
+              <span>💊</span>
+            </div>
+            <div class="idea-desc">
+              A high-precision horizontal capsule that frames only the specific line of text or 2FA code you are inspecting. Unlike the rectangular Box mode, it uses curved pill caps (`Path.addRoundRect`), leaving zero peripheral visibility.
+            </div>
+            <div class="idea-meta">
+              <span>Preserves Invariant I1 & I6</span>
+              <button class="idea-try-btn" onclick="setMode('pill')">Try in Mockup</button>
+            </div>
+          </div>
+
+          <!-- Idea 2 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-sensor">Sensor Automation</div>
+            <div class="idea-title">
+              <span>Shoulder-Surfer Tilt Blackout</span>
+              <span>📐</span>
+            </div>
+            <div class="idea-desc">
+              Uses Android's low-power hardware `SensorManager.SENSOR_ROTATION_VECTOR`. If the phone angle deviates >40° from your primary viewing vector (or is placed flat on a table), the overlay automatically snaps to 100% blackout to block bystanders.
+            </div>
+            <div class="idea-meta">
+              <span>Zero battery drain (<1% wake lock)</span>
+              <button class="idea-try-btn" onclick="togglePhoneTilt()">Simulate Tilt</button>
+            </div>
+          </div>
+
+          <!-- Idea 3 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ai">Accessibility AI</div>
+            <div class="idea-title">
+              <span>Node-Level Sensitive Field Auto-Mask</span>
+              <span>✨</span>
+            </div>
+            <div class="idea-desc">
+              Inspects `AccessibilityNodeInfo` tree for `isPassword`, regex matching (`$`, `IBAN`, `OTP`), and spawns micro-mask windows directly over the sensitive fields without obscuring the rest of your app.
+            </div>
+            <div class="idea-meta">
+              <span>Zero MediaProjection / Offline</span>
+              <button class="idea-try-btn" onclick="triggerAiFieldDetection()">Simulate Detection</button>
+            </div>
+          </div>
+
+          <!-- Idea 4 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ui">Material 3 Expressive</div>
+            <div class="idea-title">
+              <span>Haptic Textures & Hardware Knots</span>
+              <span>📳</span>
+            </div>
+            <div class="idea-desc">
+              Synthesizes Android `VibrationEffect.createPrebaked` notches on 25%, 50%, 75% opacity crossings and edge resizing snaps, providing a physical, mechanical feel to overlay adjustments.
+            </div>
+            <div class="idea-meta">
+              <span>Supported via VibrationEffect</span>
+              <button class="idea-try-btn" onclick="playClickHaptic()">Play Tactile Click</button>
+            </div>
+          </div>
+
+          <!-- Idea 5 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-innovative">Optics Simulation</div>
+            <div class="idea-title">
+              <span>Micro-Louver Privacy Shader</span>
+              <span>🕶️</span>
+            </div>
+            <div class="idea-desc">
+              Replaces flat black masks with fine 45-degree micro-louvers rendered in hardware Canvas (`BitmapShader` / linear gradient). Simulates 3M privacy filter glass, obscuring wide viewing angles while staying lightweight.
+            </div>
+            <div class="idea-meta">
+              <span>60 FPS on low-end MediaTek</span>
+              <button class="idea-try-btn" onclick="setTexture('louver')">Apply Shader</button>
+            </div>
+          </div>
+
+          <!-- Idea 6 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ui">Instant Action</div>
+            <div class="idea-title">
+              <span>Lock Screen & Tile Quick Controls</span>
+              <span>⚡</span>
+            </div>
+            <div class="idea-desc">
+              Expand the newly-optimized `GhostScreenTileService` with Android 14 lockscreen quick access buttons and dynamic status feedback, enabling 1-tap protection before you even unlock your phone.
+            </div>
+            <div class="idea-meta">
+              <span>Android 13+ QS Tile standard</span>
+              <button class="idea-try-btn" onclick="simulateQuickSettingsToggle()">Test QS Action</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Interactive Toast Feedback -->
+  <div class="toast-msg" id="toastMsg">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastContent">Action triggered</span>
+  </div>
+
+  <script>
+    // ==========================================
+    // AUDIO / TACTILE HAPTIC SYNTHESIZER
+    // ==========================================
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playClickHaptic(freq = 320, type = 'sine', duration = 0.035) {
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    const state = {
+      isOverlayShowing: true,
+      currentMode: 'box', // 'box', 'split', 'spotlight', 'pill'
+      opacity: 85,
+      texture: 'solid',
+      isTilted: false,
+      isAiShieldActive: false,
+      box: {
+        top: 140,
+        bottom: 340,
+        left: 20,
+        right: 340
+      },
+      split: {
+        top: 200,
+        bottom: 360
+      }
+    };
+
+    // DOM Elements
+    const phoneScreen = document.getElementById('phoneScreen');
+    const ghostOverlay = document.getElementById('ghostOverlay');
+    const maskTop = document.getElementById('maskTop');
+    const maskBottom = document.getElementById('maskBottom');
+    const maskLeft = document.getElementById('maskLeft');
+    const maskRight = document.getElementById('maskRight');
+    const viewportBox = document.getElementById('viewportBox');
+    const handleTL = document.getElementById('handleTL');
+    const handleTR = document.getElementById('handleTR');
+    const handleBL = document.getElementById('handleBL');
+    const handleBR = document.getElementById('handleBR');
+    const splitTop = document.getElementById('splitTop');
+    const splitBottom = document.getElementById('splitBottom');
+    const spotlightMask = document.getElementById('spotlightMask');
+    const pillViewport = document.getElementById('pillViewport');
+    const dropBadge = document.getElementById('dropBadge');
+    const dropLabel = document.getElementById('dropLabel');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityVal = document.getElementById('opacityVal');
+    const phoneDevice = document.getElementById('phoneDevice');
+    const aiShieldsContainer = document.getElementById('aiShieldsContainer');
+
+    // Layout constants
+    const SCREEN_W = 360;
+    const SCREEN_H = 682; // approximate screen height inside mockup
+
+    // ==========================================
+    // OVERLAY RENDER & UPDATE LOGIC
+    // ==========================================
+    function updateOverlayLayout() {
+      const alpha = state.opacity / 100;
+      const maskEdges = [maskTop, maskBottom, maskLeft, maskRight, splitTop, splitBottom];
+      
+      // Update Opacity everywhere
+      maskEdges.forEach(m => {
+        m.style.opacity = alpha;
+      });
+
+      if (state.currentMode === 'box') {
+        // Show Box Mode elements
+        maskTop.style.display = 'block';
+        maskBottom.style.display = 'block';
+        maskLeft.style.display = 'block';
+        maskRight.style.display = 'block';
+        viewportBox.style.display = 'block';
+        handleTL.style.display = 'flex';
+        handleTR.style.display = 'flex';
+        handleBL.style.display = 'flex';
+        handleBR.style.display = 'flex';
+
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        // Constrain box coordinates
+        const t = Math.max(0, state.box.top);
+        const b = Math.min(SCREEN_H, state.box.bottom);
+        const l = Math.max(0, state.box.left);
+        const r = Math.min(SCREEN_W, state.box.right);
+
+        // Position 4 edge masks (Invariant I1: center is empty touch passthrough)
+        maskTop.style.top = '0px';
+        maskTop.style.height = `${t}px`;
+
+        maskBottom.style.top = `${b}px`;
+        maskBottom.style.height = `${SCREEN_H - b}px`;
+
+        maskLeft.style.top = `${t}px`;
+        maskLeft.style.height = `${b - t}px`;
+        maskLeft.style.width = `${l}px`;
+
+        maskRight.style.top = `${t}px`;
+        maskRight.style.height = `${b - t}px`;
+        maskRight.style.left = `${r}px`;
+        maskRight.style.width = `${SCREEN_W - r}px`;
+
+        // Viewport outline
+        viewportBox.style.top = `${t}px`;
+        viewportBox.style.left = `${l}px`;
+        viewportBox.style.width = `${r - l}px`;
+        viewportBox.style.height = `${b - t}px`;
+
+        // Corner handles
+        handleTL.style.top = `${t}px`;
+        handleTL.style.left = `${l}px`;
+
+        handleTR.style.top = `${t}px`;
+        handleTR.style.left = `${r}px`;
+
+        handleBL.style.top = `${b}px`;
+        handleBL.style.left = `${l}px`;
+
+        handleBR.style.top = `${b}px`;
+        handleBR.style.left = `${r}px`;
+
+      } else if (state.currentMode === 'split') {
+        // Split strip mode
+        maskTop.style.display = 'none';
+        maskBottom.style.display = 'none';
+        maskLeft.style.display = 'none';
+        maskRight.style.display = 'none';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        splitTop.style.display = 'block';
+        splitBottom.style.display = 'block';
+
+        splitTop.style.top = '0px';
+        splitTop.style.height = `${state.split.top}px`;
+
+        splitBottom.style.top = `${state.split.bottom}px`;
+        splitBottom.style.height = `${SCREEN_H - state.split.bottom}px`;
+
+      } else if (state.currentMode === 'spotlight') {
+        // Spotlight mode
+        maskTop.style.display = 'none';
+        maskBottom.style.display = 'none';
+        maskLeft.style.display = 'none';
+        maskRight.style.display = 'none';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        spotlightMask.style.display = 'block';
+        const cx = 180;
+        const cy = 240;
+        const radius = 90;
+        spotlightMask.style.background = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${radius}px, rgba(0,0,0,${alpha}) ${radius + 15}px)`;
+
+      } else if (state.currentMode === 'pill') {
+        // Pill Peek mode
+        maskTop.style.display = 'block';
+        maskBottom.style.display = 'block';
+        maskLeft.style.display = 'block';
+        maskRight.style.display = 'block';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'block';
+
+        const t = 190;
+        const b = 270;
+        const l = 30;
+        const r = 330;
+
+        maskTop.style.top = '0px';
+        maskTop.style.height = `${t}px`;
+
+        maskBottom.style.top = `${b}px`;
+        maskBottom.style.height = `${SCREEN_H - b}px`;
+
+        maskLeft.style.top = `${t}px`;
+        maskLeft.style.height = `${b - t}px`;
+        maskLeft.style.width = `${l}px`;
+
+        maskRight.style.top = `${t}px`;
+        maskRight.style.height = `${b - t}px`;
+        maskRight.style.left = `${r}px`;
+        maskRight.style.width = `${SCREEN_W - r}px`;
+
+        pillViewport.style.top = `${t}px`;
+        pillViewport.style.left = `${l}px`;
+        pillViewport.style.width = `${r - l}px`;
+        pillViewport.style.height = `${b - t}px`;
+      }
+
+      dropLabel.innerText = `${state.opacity}%`;
+      opacityVal.innerText = `${state.opacity}%`;
+      opacitySlider.value = state.opacity;
+    }
+
+    // ==========================================
+    // INTERACTIVE DRAGGING IMPLEMENTATION
+    // ==========================================
+    let activeDrag = null;
+
+    function initHandleDrag(handleEl, cornerKey) {
+      handleEl.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        activeDrag = {
+          corner: cornerKey,
+          startX: e.clientX,
+          startY: e.clientY,
+          initBox: { ...state.box }
+        };
+        playClickHaptic(440, 'sine', 0.04);
+      });
+    }
+
+    initHandleDrag(handleTL, 'tl');
+    initHandleDrag(handleTR, 'tr');
+    initHandleDrag(handleBL, 'bl');
+    initHandleDrag(handleBR, 'br');
+
+    window.addEventListener('mousemove', (e) => {
+      if (!activeDrag) return;
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+      const b = activeDrag.initBox;
+
+      if (activeDrag.corner === 'tl') {
+        state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+        state.box.left = Math.min(b.left + dx, state.box.right - 80);
+      } else if (activeDrag.corner === 'tr') {
+        state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+        state.box.right = Math.max(b.right + dx, state.box.left + 80);
+      } else if (activeDrag.corner === 'bl') {
+        state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+        state.box.left = Math.min(b.left + dx, state.box.right - 80);
+      } else if (activeDrag.corner === 'br') {
+        state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+        state.box.right = Math.max(b.right + dx, state.box.left + 80);
+      }
+
+      updateOverlayLayout();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (activeDrag) {
+        playClickHaptic(360, 'sine', 0.03);
+        activeDrag = null;
+      }
+    });
+
+    // ==========================================
+    // CONTROLS & EVENT HANDLERS
+    // ==========================================
+    function setMode(mode) {
+      state.currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btnMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      playClickHaptic(500, 'triangle', 0.04);
+      showToast(`Switched geometry to ${mode.toUpperCase()} mode`);
+      updateOverlayLayout();
+    }
+
+    function updateOpacity(val) {
+      state.opacity = parseInt(val, 10);
+      if (state.opacity % 25 === 0) {
+        playClickHaptic(600, 'sine', 0.03); // Haptic notch feedback
+      }
+      updateOverlayLayout();
+    }
+
+    function cycleOpacity() {
+      playClickHaptic(480, 'sine', 0.04);
+      state.opacity = (state.opacity >= 95) ? 25 : state.opacity + 25;
+      updateOverlayLayout();
+      showToast(`Overlay opacity stepped to ${state.opacity}%`);
+    }
+
+    function toggleOverlay() {
+      state.isOverlayShowing = !state.isOverlayShowing;
+      ghostOverlay.style.opacity = state.isOverlayShowing ? '1' : '0';
+      ghostOverlay.style.pointerEvents = state.isOverlayShowing ? 'auto' : 'none';
+      const sub = document.getElementById('mockupCardSub');
+      if (sub) sub.innerText = state.isOverlayShowing ? 'Overlay ACTIVE (Tap to Disarm)' : 'Overlay IDLE (Tap to Arm)';
+      playClickHaptic(state.isOverlayShowing ? 520 : 260, 'sine', 0.06);
+      showToast(state.isOverlayShowing ? 'Privacy Overlay Armed' : 'Privacy Overlay Disarmed');
+    }
+
+    function setTexture(tex, btn) {
+      state.texture = tex;
+      const maskElements = document.querySelectorAll('.mask-edge, .split-strip');
+      maskElements.forEach(el => {
+        el.classList.remove('texture-louver', 'texture-matrix', 'texture-noise');
+        if (tex !== 'solid') el.classList.add(`texture-${tex}`);
+      });
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      playClickHaptic(420, 'square', 0.03);
+      showToast(`Applied shader texture: ${tex.toUpperCase()}`);
+    }
+
+    function setAccentTheme(primary, accent, btn) {
+      document.documentElement.style.setProperty('--md-primary', primary);
+      document.documentElement.style.setProperty('--md-accent', accent);
+      document.documentElement.style.setProperty('--md-accent-glow', `${primary}55`);
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      playClickHaptic(580, 'sine', 0.04);
+      showToast(`Material 3 Expressive theme updated`);
+    }
+
+    function switchApp(appId, btn) {
+      document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(appId).classList.add('active');
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      // Clear AI field shields on app change
+      clearAiShields();
+      playClickHaptic(360, 'triangle', 0.03);
+    }
+
+    function applyPreset(preset) {
+      if (preset === 'transit') {
+        state.currentMode = 'box';
+        state.opacity = 95;
+        state.box = { top: 120, bottom: 280, left: 15, right: 345 };
+        setTextTexture('louver');
+      } else if (preset === 'atm') {
+        state.currentMode = 'pill';
+        state.opacity = 100;
+        setTextTexture('solid');
+      } else if (preset === 'reading') {
+        state.currentMode = 'split';
+        state.opacity = 90;
+        state.split = { top: 220, bottom: 320 };
+        setTextTexture('solid');
+      }
+      updateOverlayLayout();
+      showToast(`Applied preset: ${preset.toUpperCase()}`);
+      playClickHaptic(620, 'sine', 0.05);
+    }
+
+    function setTextTexture(tex) {
+      state.texture = tex;
+      const maskElements = document.querySelectorAll('.mask-edge, .split-strip');
+      maskElements.forEach(el => {
+        el.classList.remove('texture-louver', 'texture-matrix', 'texture-noise');
+        if (tex !== 'solid') el.classList.add(`texture-${tex}`);
+      });
+    }
+
+    // ==========================================
+    // SENSOR & AI ADVANCED FEATURE SIMULATIONS
+    // ==========================================
+    function togglePhoneTilt() {
+      state.isTilted = !state.isTilted;
+      const btn = document.getElementById('btnTiltTrigger');
+      if (state.isTilted) {
+        phoneDevice.classList.add('tilted');
+        btn.classList.add('active');
+        // Tilt trigger immediately boosts opacity to 100% (Pitch Black)
+        state.opacity = 100;
+        updateOverlayLayout();
+        playClickHaptic(220, 'sawtooth', 0.1);
+        showToast('⚠️ Tilt sensor triggered! Blackout Cloak engaged (>40° angle)');
+      } else {
+        phoneDevice.classList.remove('tilted');
+        btn.classList.remove('active');
+        state.opacity = 85;
+        updateOverlayLayout();
+        playClickHaptic(440, 'sine', 0.05);
+        showToast('Phone returned to direct view: Restored normal opacity');
+      }
+    }
+
+    function triggerPanicCloak() {
+      playClickHaptic(180, 'sawtooth', 0.15);
+      state.opacity = 100;
+      updateOverlayLayout();
+      showToast('🚨 PANIC CLOAK ACTIVATED! Screen 100% blacked out.');
+    }
+
+    function simulateQuickSettingsToggle() {
+      toggleOverlay();
+    }
+
+    function clearAiShields() {
+      aiShieldsContainer.innerHTML = '';
+      state.isAiShieldActive = false;
+      const btn = document.getElementById('btnAiScan');
+      if (btn) btn.classList.remove('active');
+    }
+
+    function triggerAiFieldDetection() {
+      state.isAiShieldActive = !state.isAiShieldActive;
+      const btn = document.getElementById('btnAiScan');
+      if (!state.isAiShieldActive) {
+        clearAiShields();
+        showToast('AI node shields dismissed');
+        return;
+      }
+
+      btn.classList.add('active');
+      playClickHaptic(720, 'triangle', 0.08);
+
+      // Scan active screen elements and drop mini privacy tiles over sensitive data
+      aiShieldsContainer.innerHTML = '';
+
+      const bankBalance = document.getElementById('bankBalanceText');
+      const bankCardNum = document.getElementById('bankCardNum');
+      const chatOtp = document.getElementById('chatOtpBubble');
+      const authItem1 = document.getElementById('authItem1');
+
+      const createShieldFor = (el, label) => {
+        if (!el || el.offsetParent === null) return;
+        const rect = el.getBoundingClientRect();
+        const screenRect = phoneScreen.getBoundingClientRect();
+        
+        const top = rect.top - screenRect.top;
+        const left = rect.left - screenRect.left;
+        const width = rect.width;
+        const height = rect.height;
+
+        const shield = document.createElement('div');
+        shield.className = 'ai-field-shield';
+        shield.style.top = `${top - 2}px`;
+        shield.style.left = `${left - 4}px`;
+        shield.style.width = `${width + 8}px`;
+        shield.style.height = `${height + 4}px`;
+        shield.innerHTML = `<span>🔒 ${label}</span>`;
+        shield.onclick = () => {
+          shield.remove();
+          playClickHaptic(500, 'sine', 0.02);
+        };
+        aiShieldsContainer.appendChild(shield);
+      };
+
+      createShieldFor(bankBalance, 'BALANCE MASKED');
+      createShieldFor(bankCardNum, 'CARD NO. MASKED');
+      createShieldFor(chatOtp, 'OTP CODE MASKED');
+      createShieldFor(authItem1, '2FA SECRET MASKED');
+
+      showToast('✨ AI scanned Accessibility tree: 3 sensitive fields shielded!');
+    }
+
+    // ==========================================
+    // TOAST NOTIFIER
+    // ==========================================
+    let toastTimeout = null;
+    function showToast(text, icon = '🛡️') {
+      const toast = document.getElementById('toastMsg');
+      const toastContent = document.getElementById('toastContent');
+      const toastIcon = document.getElementById('toastIcon');
+      toastContent.innerText = text;
+      toastIcon.innerText = icon;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3200);
+    }
+
+    // Initialize clock and overlay layout on load
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('phoneClock').innerText = `${h}:${m}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+    updateOverlayLayout();
+  </script>
+</body>
+</html>
