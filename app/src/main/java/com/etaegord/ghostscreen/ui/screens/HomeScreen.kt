@@ -505,18 +505,42 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Quick Stats Row
+            // Quick Stats Row (Manual Mask Instant Action + Audit Log)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                val manualContainerColor by animateColorAsState(
+                    targetValue = if (isManualActive) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerLow,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "manualCardColor"
+                )
                 StatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Smart Mask",
-                    value = "${protectedAppsCount.size} apps",
-                    icon = Icons.Default.Apps,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    onClick = onNavigateToSmartMask
+                    title = "Manual Mask",
+                    value = if (isManualActive) "ACTIVE" else "Ready",
+                    icon = if (isManualActive) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    containerColor = manualContainerColor,
+                    titleColor = if (isManualActive) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    valueColor = if (isManualActive) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurface,
+                    iconBgColor = if (isManualActive) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    iconTint = if (isManualActive) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    trailingIcon = if (isManualActive) Icons.Default.CheckCircle else Icons.AutoMirrored.Default.ArrowForward,
+                    trailingIconTint = if (isManualActive) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = {
+                        val newManual = !isManualActive
+                        preferencesManager.isManualOverrideActive = newManual
+                        isManualActive = newManual
+                    }
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
@@ -582,6 +606,12 @@ fun StatCard(
     value: String,
     icon: ImageVector,
     containerColor: Color,
+    titleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconBgColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    trailingIcon: ImageVector = Icons.AutoMirrored.Default.ArrowForward,
+    trailingIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -622,20 +652,20 @@ fun StatCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(iconBgColor),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = iconTint,
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 Icon(
-                    imageVector = Icons.AutoMirrored.Default.ArrowForward,
+                    imageVector = trailingIcon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = trailingIconTint,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -643,13 +673,13 @@ fun StatCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = titleColor
                 )
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = valueColor
                 )
             }
         }
