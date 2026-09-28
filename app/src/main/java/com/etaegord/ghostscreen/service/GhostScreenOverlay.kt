@@ -866,6 +866,7 @@ class GhostScreenOverlay(
             }
         }
         updateCornerPositions()
+        maskView?.invalidate()
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -1321,11 +1322,9 @@ class GhostScreenOverlay(
                     if (!dragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         dragging = true
                         bump()
-                        lx = e.rawX
-                        ly = e.rawY
                     }
                     if (dragging) {
-                        dragBoxCorner(cornerIdx, e.rawX - lx, e.rawY - ly)
+                        dragBoxCorner(cornerIdx, dx, dy)
                         scheduleEditDim()
                         lx = e.rawX
                         ly = e.rawY
@@ -1336,6 +1335,7 @@ class GhostScreenOverlay(
                     mainHandler.removeCallbacks(hintRun)
                     if (dragging) {
                         updateCornerPositions()
+                        maskView?.invalidate()
                         if (boxBottom > boxTop && screenH > 0) {
                             preferencesManager.cutoutYPct = ((boxTop + boxBottom) / 2f / screenH).coerceIn(0f, 1f)
                             preferencesManager.cutoutHeightPct = ((boxBottom - boxTop) / screenH).coerceIn(0.05f, 0.9f)
