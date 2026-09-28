@@ -472,6 +472,7 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
       cursor: grab;
       pointer-events: auto;
+      touch-action: none;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -482,7 +483,7 @@
 
     .corner-handle:active {
       cursor: grabbing;
-      transform: translate(-50%, -50%) scale(1.15);
+      transform: translate(-50%, -50%) scale(1.18);
     }
 
     .corner-handle::after {
@@ -507,13 +508,14 @@
       gap: 8px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
       z-index: 38;
-      cursor: pointer;
+      cursor: ns-resize;
       pointer-events: auto;
+      touch-action: none;
       transition: transform 0.2s ease, opacity 0.2s ease;
     }
 
     .drop-badge:hover {
-      transform: scale(1.05);
+      transform: scale(1.06);
     }
 
     .drop-icon {
@@ -535,7 +537,9 @@
       right: 0;
       background: #000;
       pointer-events: auto;
+      touch-action: none;
       display: none;
+      z-index: 25;
     }
 
     .split-top { top: 0; }
@@ -545,18 +549,42 @@
       position: absolute;
       left: 50%;
       transform: translateX(-50%);
-      width: 60px;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.6);
-      border-radius: 3px;
+      width: 76px;
+      height: 10px;
+      background: var(--md-accent);
+      border-radius: 5px;
+      cursor: ns-resize;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      pointer-events: auto;
+      transition: background-color 0.2s, transform 0.15s;
+    }
+
+    .split-bar:hover, .split-bar:active {
+      transform: translateX(-50%) scale(1.12);
+      background: #fff;
+    }
+
+    .split-bar::after {
+      content: '';
+      width: 26px;
+      height: 2px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 1px;
     }
 
     /* Alternate Mode 2: Spotlight / Circle Torch */
     .spotlight-mask {
       position: absolute;
       inset: 0;
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: crosshair;
+      touch-action: none;
       display: none;
+      z-index: 28;
     }
 
     /* Alternate Mode 3: Dynamic Pill / Island Peek */
@@ -565,8 +593,28 @@
       border-radius: 999px;
       border: 2px solid var(--md-accent);
       box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
+      touch-action: none;
       display: none;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .pill-viewport:active {
+      cursor: grabbing;
+    }
+
+    .pill-handle {
+      width: 34px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+      position: absolute;
+      top: 6px;
     }
 
     /* AI Field Highlight Shield Mini-Overlay */
@@ -1099,21 +1147,24 @@
             <div class="corner-handle" id="handleBR"></div>
 
             <!-- Split Strip Mode Windows -->
+            <!-- Split Strip Mode Windows -->
             <div class="split-strip split-top" id="splitTop">
-              <div class="split-bar" style="bottom: 8px;"></div>
+              <div class="split-bar" id="splitTopBar" style="bottom: 8px;" title="Drag down to adjust top reading barrier"></div>
             </div>
             <div class="split-strip split-bottom" id="splitBottom">
-              <div class="split-bar" style="top: 8px;"></div>
+              <div class="split-bar" id="splitBottomBar" style="top: 8px;" title="Drag up to adjust bottom reading barrier"></div>
             </div>
 
             <!-- Circular Spotlight Torch Mode -->
-            <div class="spotlight-mask" id="spotlightMask"></div>
+            <div class="spotlight-mask" id="spotlightMask" title="Move pointer or drag across screen to aim spotlight torch"></div>
 
             <!-- Pill Peek Mode -->
-            <div class="pill-viewport" id="pillViewport"></div>
+            <div class="pill-viewport" id="pillViewport" title="Drag capsule up or down to peek through text lines">
+              <div class="pill-handle"></div>
+            </div>
 
             <!-- Droplet Badge (Dynamic M3 Expressive) -->
-            <div class="drop-badge" id="dropBadge" onclick="cycleOpacity()">
+            <div class="drop-badge" id="dropBadge" title="Tap to step opacity, or drag vertically to adjust">
               <svg class="drop-icon" viewBox="0 0 24 24">
                 <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
               </svg>
@@ -1235,6 +1286,37 @@
           <button class="chip-btn" onclick="triggerPanicCloak()">
             <span>🚨 Panic Double-Shake Disguise</span>
           </button>
+        </div>
+
+        <!-- Dynamic 3D Gyroscope & Spotlight Aperture Controls -->
+        <div class="controls-grid" style="margin-top: 18px;">
+          <div class="control-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="control-label" style="margin-bottom: 0;">📐 3D Gyroscope Phone Tilt Angle</label>
+              <span id="tiltBadge" style="font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">DIRECT (0°)</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="tiltSlider" min="0" max="65" value="0" oninput="setTiltAngle(this.value)">
+              <span class="slider-val" id="tiltVal">0°</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--md-text-muted); margin-top: 4px;">
+              Slide to tilt phone in 3D. Shoulder-surfer blackout snaps to 100% OLED black when angle ≥ 40°.
+            </div>
+          </div>
+
+          <div class="control-group" id="spotlightControlGroup" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="control-label" style="margin-bottom: 0;">🔦 Spotlight Beam Radius</label>
+              <span id="spotlightRadiusVal" class="slider-val">80px</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="spotlightSlider" min="45" max="130" value="80" oninput="setSpotlightRadius(this.value)">
+              <span class="slider-val">Size</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--md-text-muted); margin-top: 4px;">
+              Move cursor/touch on screen to aim torch aperture.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1388,8 +1470,10 @@
       isOverlayShowing: true,
       currentMode: 'box', // 'box', 'split', 'spotlight', 'pill'
       opacity: 85,
+      savedOpacity: 85,
       texture: 'solid',
       isTilted: false,
+      tiltAngle: 0,
       isAiShieldActive: false,
       box: {
         top: 140,
@@ -1400,6 +1484,15 @@
       split: {
         top: 200,
         bottom: 360
+      },
+      spotlight: {
+        cx: 180,
+        cy: 260,
+        radius: 80
+      },
+      pill: {
+        top: 200,
+        height: 80
       }
     };
 
@@ -1417,6 +1510,8 @@
     const handleBR = document.getElementById('handleBR');
     const splitTop = document.getElementById('splitTop');
     const splitBottom = document.getElementById('splitBottom');
+    const splitTopBar = document.getElementById('splitTopBar');
+    const splitBottomBar = document.getElementById('splitBottomBar');
     const spotlightMask = document.getElementById('spotlightMask');
     const pillViewport = document.getElementById('pillViewport');
     const dropBadge = document.getElementById('dropBadge');
@@ -1425,6 +1520,12 @@
     const opacityVal = document.getElementById('opacityVal');
     const phoneDevice = document.getElementById('phoneDevice');
     const aiShieldsContainer = document.getElementById('aiShieldsContainer');
+    const tiltSlider = document.getElementById('tiltSlider');
+    const tiltVal = document.getElementById('tiltVal');
+    const tiltBadge = document.getElementById('tiltBadge');
+    const spotlightControlGroup = document.getElementById('spotlightControlGroup');
+    const spotlightSlider = document.getElementById('spotlightSlider');
+    const spotlightRadiusVal = document.getElementById('spotlightRadiusVal');
 
     // Layout constants
     const SCREEN_W = 360;
@@ -1437,9 +1538,9 @@
       const alpha = state.opacity / 100;
       const maskEdges = [maskTop, maskBottom, maskLeft, maskRight, splitTop, splitBottom];
       
-      // Update Opacity everywhere
+      // Update Opacity across all mask surfaces
       maskEdges.forEach(m => {
-        m.style.opacity = alpha;
+        if (m) m.style.opacity = alpha;
       });
 
       if (state.currentMode === 'box') {
@@ -1468,13 +1569,18 @@
         // Position 4 edge masks (Invariant I1: center is empty touch passthrough)
         maskTop.style.top = '0px';
         maskTop.style.height = `${t}px`;
+        maskTop.style.width = '100%';
+        maskTop.style.left = '0px';
 
         maskBottom.style.top = `${b}px`;
         maskBottom.style.height = `${SCREEN_H - b}px`;
+        maskBottom.style.width = '100%';
+        maskBottom.style.left = '0px';
 
         maskLeft.style.top = `${t}px`;
         maskLeft.style.height = `${b - t}px`;
         maskLeft.style.width = `${l}px`;
+        maskLeft.style.left = '0px';
 
         maskRight.style.top = `${t}px`;
         maskRight.style.height = `${b - t}px`;
@@ -1539,10 +1645,10 @@
         pillViewport.style.display = 'none';
 
         spotlightMask.style.display = 'block';
-        const cx = 180;
-        const cy = 240;
-        const radius = 90;
-        spotlightMask.style.background = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${radius}px, rgba(0,0,0,${alpha}) ${radius + 15}px)`;
+        const cx = state.spotlight.cx;
+        const cy = state.spotlight.cy;
+        const radius = state.spotlight.radius;
+        spotlightMask.style.background = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${radius}px, rgba(0,0,0,${alpha}) ${radius + 18}px)`;
 
       } else if (state.currentMode === 'pill') {
         // Pill Peek mode
@@ -1558,22 +1664,27 @@
         splitTop.style.display = 'none';
         splitBottom.style.display = 'none';
         spotlightMask.style.display = 'none';
-        pillViewport.style.display = 'block';
+        pillViewport.style.display = 'flex';
 
-        const t = 190;
-        const b = 270;
-        const l = 30;
-        const r = 330;
+        const t = Math.max(16, Math.min(SCREEN_H - state.pill.height - 16, state.pill.top));
+        const b = t + state.pill.height;
+        const l = 20;
+        const r = SCREEN_W - 20;
 
         maskTop.style.top = '0px';
         maskTop.style.height = `${t}px`;
+        maskTop.style.width = '100%';
+        maskTop.style.left = '0px';
 
         maskBottom.style.top = `${b}px`;
         maskBottom.style.height = `${SCREEN_H - b}px`;
+        maskBottom.style.width = '100%';
+        maskBottom.style.left = '0px';
 
         maskLeft.style.top = `${t}px`;
         maskLeft.style.height = `${b - t}px`;
         maskLeft.style.width = `${l}px`;
+        maskLeft.style.left = '0px';
 
         maskRight.style.top = `${t}px`;
         maskRight.style.height = `${b - t}px`;
@@ -1592,15 +1703,18 @@
     }
 
     // ==========================================
-    // INTERACTIVE DRAGGING IMPLEMENTATION
+    // UNIFIED POINTER DRAGGING ENGINE
+    // Supports Desktop Mouse, Touchscreens & Pens
     // ==========================================
     let activeDrag = null;
 
-    function initHandleDrag(handleEl, cornerKey) {
-      handleEl.addEventListener('mousedown', (e) => {
+    function initCornerDrag(handleEl, cornerKey) {
+      handleEl.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
         activeDrag = {
+          type: 'corner',
           corner: cornerKey,
           startX: e.clientX,
           startY: e.clientY,
@@ -1610,39 +1724,145 @@
       });
     }
 
-    initHandleDrag(handleTL, 'tl');
-    initHandleDrag(handleTR, 'tr');
-    initHandleDrag(handleBL, 'bl');
-    initHandleDrag(handleBR, 'br');
+    initCornerDrag(handleTL, 'tl');
+    initCornerDrag(handleTR, 'tr');
+    initCornerDrag(handleBL, 'bl');
+    initCornerDrag(handleBR, 'br');
 
-    window.addEventListener('mousemove', (e) => {
-      if (!activeDrag) return;
-      const dx = e.clientX - activeDrag.startX;
-      const dy = e.clientY - activeDrag.startY;
-      const b = activeDrag.initBox;
+    function initSplitDrag(barEl, isTop) {
+      if (!barEl) return;
+      barEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try { barEl.setPointerCapture(e.pointerId); } catch (_) {}
+        activeDrag = {
+          type: 'split',
+          isTop: isTop,
+          startY: e.clientY,
+          initVal: isTop ? state.split.top : state.split.bottom
+        };
+        playClickHaptic(420, 'triangle', 0.04);
+      });
+    }
 
-      if (activeDrag.corner === 'tl') {
-        state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
-        state.box.left = Math.min(b.left + dx, state.box.right - 80);
-      } else if (activeDrag.corner === 'tr') {
-        state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
-        state.box.right = Math.max(b.right + dx, state.box.left + 80);
-      } else if (activeDrag.corner === 'bl') {
-        state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
-        state.box.left = Math.min(b.left + dx, state.box.right - 80);
-      } else if (activeDrag.corner === 'br') {
-        state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
-        state.box.right = Math.max(b.right + dx, state.box.left + 80);
-      }
+    initSplitDrag(splitTopBar, true);
+    initSplitDrag(splitBottomBar, false);
 
-      updateOverlayLayout();
+    pillViewport.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try { pillViewport.setPointerCapture(e.pointerId); } catch (_) {}
+      activeDrag = {
+        type: 'pill',
+        startY: e.clientY,
+        initTop: state.pill.top
+      };
+      playClickHaptic(480, 'sine', 0.03);
     });
 
-    window.addEventListener('mouseup', () => {
+    dropBadge.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try { dropBadge.setPointerCapture(e.pointerId); } catch (_) {}
+      activeDrag = {
+        type: 'dropBadge',
+        startY: e.clientY,
+        initOpacity: state.opacity,
+        moved: false
+      };
+    });
+
+    function updateSpotlightFromPointer(e) {
+      const rect = phoneScreen.getBoundingClientRect();
+      const x = Math.max(20, Math.min(SCREEN_W - 20, e.clientX - rect.left));
+      const y = Math.max(20, Math.min(SCREEN_H - 20, e.clientY - rect.top));
+      state.spotlight.cx = Math.round(x);
+      state.spotlight.cy = Math.round(y);
+      updateOverlayLayout();
+    }
+
+    phoneScreen.addEventListener('pointermove', (e) => {
+      if (state.currentMode === 'spotlight' && !activeDrag) {
+        updateSpotlightFromPointer(e);
+      }
+    });
+
+    phoneScreen.addEventListener('pointerdown', (e) => {
+      if (state.currentMode === 'spotlight') {
+        updateSpotlightFromPointer(e);
+        playClickHaptic(520, 'sine', 0.02);
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!activeDrag) return;
+
+      if (activeDrag.type === 'corner') {
+        const dx = e.clientX - activeDrag.startX;
+        const dy = e.clientY - activeDrag.startY;
+        const b = activeDrag.initBox;
+
+        if (activeDrag.corner === 'tl') {
+          state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+          state.box.left = Math.min(b.left + dx, state.box.right - 80);
+        } else if (activeDrag.corner === 'tr') {
+          state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+          state.box.right = Math.max(b.right + dx, state.box.left + 80);
+        } else if (activeDrag.corner === 'bl') {
+          state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+          state.box.left = Math.min(b.left + dx, state.box.right - 80);
+        } else if (activeDrag.corner === 'br') {
+          state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+          state.box.right = Math.max(b.right + dx, state.box.left + 80);
+        }
+        updateOverlayLayout();
+
+      } else if (activeDrag.type === 'split') {
+        const dy = e.clientY - activeDrag.startY;
+        if (activeDrag.isTop) {
+          const newTop = Math.max(30, Math.min(state.split.bottom - 50, activeDrag.initVal + dy));
+          if (Math.abs(newTop - state.split.top) >= 1) {
+            state.split.top = newTop;
+            updateOverlayLayout();
+          }
+        } else {
+          const newBot = Math.min(SCREEN_H - 30, Math.max(state.split.top + 50, activeDrag.initVal + dy));
+          if (Math.abs(newBot - state.split.bottom) >= 1) {
+            state.split.bottom = newBot;
+            updateOverlayLayout();
+          }
+        }
+
+      } else if (activeDrag.type === 'pill') {
+        const dy = e.clientY - activeDrag.startY;
+        state.pill.top = Math.max(20, Math.min(SCREEN_H - state.pill.height - 20, activeDrag.initTop + dy));
+        updateOverlayLayout();
+
+      } else if (activeDrag.type === 'dropBadge') {
+        const dy = activeDrag.startY - e.clientY;
+        if (Math.abs(dy) > 4) activeDrag.moved = true;
+        const newOp = Math.min(100, Math.max(10, Math.round(activeDrag.initOpacity + dy * 0.5)));
+        if (newOp !== state.opacity) {
+          state.opacity = newOp;
+          if (newOp % 20 === 0) playClickHaptic(520, 'sine', 0.02);
+          updateOverlayLayout();
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
       if (activeDrag) {
-        playClickHaptic(360, 'sine', 0.03);
+        if (activeDrag.type === 'dropBadge' && !activeDrag.moved) {
+          cycleOpacity();
+        } else {
+          playClickHaptic(360, 'sine', 0.03);
+        }
         activeDrag = null;
       }
+    });
+
+    window.addEventListener('pointercancel', () => {
+      activeDrag = null;
     });
 
     // ==========================================
@@ -1653,6 +1873,11 @@
       document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
       const activeBtn = document.getElementById(`btnMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
       if (activeBtn) activeBtn.classList.add('active');
+
+      if (spotlightControlGroup) {
+        spotlightControlGroup.style.display = (mode === 'spotlight') ? 'block' : 'none';
+      }
+
       playClickHaptic(500, 'triangle', 0.04);
       showToast(`Switched geometry to ${mode.toUpperCase()} mode`);
       updateOverlayLayout();
@@ -1660,6 +1885,7 @@
 
     function updateOpacity(val) {
       state.opacity = parseInt(val, 10);
+      state.savedOpacity = state.opacity;
       if (state.opacity % 25 === 0) {
         playClickHaptic(600, 'sine', 0.03); // Haptic notch feedback
       }
@@ -1669,6 +1895,7 @@
     function cycleOpacity() {
       playClickHaptic(480, 'sine', 0.04);
       state.opacity = (state.opacity >= 95) ? 25 : state.opacity + 25;
+      state.savedOpacity = state.opacity;
       updateOverlayLayout();
       showToast(`Overlay opacity stepped to ${state.opacity}%`);
     }
@@ -1712,12 +1939,12 @@
 
     function switchApp(appId, btn) {
       document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(appId).classList.add('active');
+      const targetApp = document.getElementById(appId);
+      if (targetApp) targetApp.classList.add('active');
       if (btn) {
         btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       }
-      // Clear AI field shields on app change
       clearAiShields();
       playClickHaptic(360, 'triangle', 0.03);
     }
@@ -1726,18 +1953,23 @@
       if (preset === 'transit') {
         state.currentMode = 'box';
         state.opacity = 95;
+        state.savedOpacity = 95;
         state.box = { top: 120, bottom: 280, left: 15, right: 345 };
         setTextTexture('louver');
       } else if (preset === 'atm') {
         state.currentMode = 'pill';
         state.opacity = 100;
+        state.savedOpacity = 100;
+        state.pill.top = 220;
         setTextTexture('solid');
       } else if (preset === 'reading') {
         state.currentMode = 'split';
         state.opacity = 90;
+        state.savedOpacity = 90;
         state.split = { top: 220, bottom: 320 };
         setTextTexture('solid');
       }
+      setMode(state.currentMode);
       updateOverlayLayout();
       showToast(`Applied preset: ${preset.toUpperCase()}`);
       playClickHaptic(620, 'sine', 0.05);
@@ -1752,33 +1984,67 @@
       });
     }
 
+    function setSpotlightRadius(r) {
+      state.spotlight.radius = parseInt(r, 10);
+      if (spotlightRadiusVal) spotlightRadiusVal.innerText = `${state.spotlight.radius}px`;
+      updateOverlayLayout();
+    }
+
     // ==========================================
     // SENSOR & AI ADVANCED FEATURE SIMULATIONS
     // ==========================================
-    function togglePhoneTilt() {
-      state.isTilted = !state.isTilted;
-      const btn = document.getElementById('btnTiltTrigger');
-      if (state.isTilted) {
-        phoneDevice.classList.add('tilted');
-        btn.classList.add('active');
-        // Tilt trigger immediately boosts opacity to 100% (Pitch Black)
-        state.opacity = 100;
-        updateOverlayLayout();
-        playClickHaptic(220, 'sawtooth', 0.1);
-        showToast('⚠️ Tilt sensor triggered! Blackout Cloak engaged (>40° angle)');
+    function setTiltAngle(deg) {
+      deg = parseInt(deg, 10);
+      state.tiltAngle = deg;
+      if (tiltSlider) tiltSlider.value = deg;
+      if (tiltVal) tiltVal.innerText = `${deg}°`;
+
+      // Apply 3D perspective tilt transform to phone frame
+      if (deg === 0) {
+        phoneDevice.style.transform = 'none';
       } else {
-        phoneDevice.classList.remove('tilted');
-        btn.classList.remove('active');
-        state.opacity = 85;
-        updateOverlayLayout();
-        playClickHaptic(440, 'sine', 0.05);
-        showToast('Phone returned to direct view: Restored normal opacity');
+        const factor = deg / 65;
+        phoneDevice.style.transform = `rotate3d(0.4, -1, 0.2, ${deg}deg) scale(${1 - factor * 0.06})`;
       }
+
+      // Dynamic automatic blackout threshold at 40 degrees
+      if (deg >= 40) {
+        if (!state.isTilted) {
+          state.isTilted = true;
+          playClickHaptic(200, 'sawtooth', 0.12);
+          showToast('⚠️ Shoulder-surfer tilt detected (≥40°)! Blackout Cloak engaged.', '🚨');
+        }
+        if (tiltBadge) {
+          tiltBadge.innerText = `BLACKOUT (${deg}°)`;
+          tiltBadge.style.background = 'rgba(239, 68, 68, 0.25)';
+          tiltBadge.style.color = '#fca5a5';
+        }
+        state.opacity = 100;
+      } else {
+        if (state.isTilted) {
+          state.isTilted = false;
+          playClickHaptic(440, 'sine', 0.04);
+          showToast(`Viewing angle restored (${deg}°): Normal opacity resumed.`, '🛡️');
+          state.opacity = state.savedOpacity || 85;
+        }
+        if (tiltBadge) {
+          tiltBadge.innerText = `DIRECT (${deg}°)`;
+          tiltBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+          tiltBadge.style.color = '#6ee7b7';
+        }
+      }
+      updateOverlayLayout();
+    }
+
+    function togglePhoneTilt() {
+      const target = (state.tiltAngle >= 40) ? 0 : 50;
+      setTiltAngle(target);
     }
 
     function triggerPanicCloak() {
       playClickHaptic(180, 'sawtooth', 0.15);
       state.opacity = 100;
+      state.savedOpacity = 100;
       updateOverlayLayout();
       showToast('🚨 PANIC CLOAK ACTIVATED! Screen 100% blacked out.');
     }
@@ -1803,7 +2069,7 @@
         return;
       }
 
-      btn.classList.add('active');
+      if (btn) btn.classList.add('active');
       playClickHaptic(720, 'triangle', 0.08);
 
       // Scan active screen elements and drop mini privacy tiles over sensitive data
@@ -1854,6 +2120,7 @@
       const toast = document.getElementById('toastMsg');
       const toastContent = document.getElementById('toastContent');
       const toastIcon = document.getElementById('toastIcon');
+      if (!toast || !toastContent || !toastIcon) return;
       toastContent.innerText = text;
       toastIcon.innerText = icon;
       toast.classList.add('show');
@@ -1868,7 +2135,8 @@
       const now = new Date();
       const h = String(now.getHours()).padStart(2, '0');
       const m = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('phoneClock').innerText = `${h}:${m}`;
+      const clock = document.getElementById('phoneClock');
+      if (clock) clock.innerText = `${h}:${m}`;
     }
     setInterval(updateClock, 1000);
     updateClock();
