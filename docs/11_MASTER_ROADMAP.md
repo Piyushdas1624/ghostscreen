@@ -351,6 +351,28 @@ Known drift to correct:
 
 ---
 
+# Phase 11 — Novel Privacy Innovations Engine
+> Technical analysis & mitigation specifications documented in [UPCOMING_FEATURES.md](file:///E:/01_Projects_and_Code/ghostscreen/docs/UPCOMING_FEATURES.md)
+
+### M11.1 — Task-Switcher Camouflage (Recents Shield) ⬜
+- [ ] Pre-emptive bottom gesture transition hooks to beat SurfaceFlinger snapshot
+- [ ] Zero-latency 100% black veil stamping into buffer before `TYPE_WINDOW_STATE_CHANGED`
+- [ ] Device verification on Infinix XOS launcher
+
+### M11.2 — Micro-Louver Shader & Gyroscope Sentry ⬜
+- [ ] Pre-allocated `BitmapShader` for 45° diagonal 3M privacy louvers
+- [ ] Low-power `Sensor.TYPE_ROTATION_VECTOR` listener with 40° viewing-angle blackout snap
+
+### M11.3 — Semantic Node Auto-Masking ⬜
+- [ ] Scan `AccessibilityNodeInfo` for password and financial regex tokens
+- [ ] Spawn micro-mask sub-windows over sensitive nodes (Invariant I5: zero screen capture)
+
+### M11.4 — Optical Anti-OCR & Gaze Guard Prototype ⬜
+- [ ] High-frequency phase-drift sinusoidal grating for camera OCR degradation
+- [ ] Opt-in CameraX ML Kit Face Detection at 0.5 FPS with ambient light lux guard
+
+---
+
 ## 3. Commit Log (this effort)
 
 | Commit | Scope |
