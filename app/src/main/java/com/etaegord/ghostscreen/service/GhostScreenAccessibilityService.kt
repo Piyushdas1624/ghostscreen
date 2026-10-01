@@ -116,6 +116,26 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         OverlayTransition.isTransient(packageName)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // 1. Notification Privacy Shield: Detect heads-up banners and obscure
+        if (event.eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
+            if (preferencesManager.isNotificationShieldEnabled) {
+                val pkg = event.packageName?.toString() ?: ""
+                if (pkg != this.packageName) {
+                    overlay?.showNotificationShield()
+                }
+            }
+            return
+        }
+
+        // 2. AI Sensitive Field Auto-Shielding: scan visible fields on content change or focus
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+            if (preferencesManager.isAiSensitiveShieldingEnabled) {
+                scheduleSensitiveFieldScan()
+            }
+            return
+        }
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: return
             val className = event.className?.toString() ?: ""
@@ -128,6 +148,11 @@ class GhostScreenAccessibilityService : AccessibilityService() {
             // Track the last non-system, non-keyboard app package
             if (!OverlayTransition.isTransient(packageName)) {
                 lastActiveAppPackage = packageName
+            }
+
+            // Trigger AI sensitive field scan on app window change if enabled
+            if (preferencesManager.isAiSensitiveShieldingEnabled) {
+                scheduleSensitiveFieldScan()
             }
 
             // Debounce: if we already know about this package, skip duplicate events
@@ -145,6 +170,82 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                 // Small delay to debounce rapid window-state-change bursts
                 delay(150)
                 checkCurrentApp(packageName)
+            }
+        }
+    }
+
+    private var sensitiveScanJob: Job? = null
+    private val cardRegex = Regex("""\b(?:\d[ -]*?){13,19}\b""")
+    private val otpRegex = Regex("""(?i)\b(?:otp|code|verification|pin)\b.{0,15}\b\d{4,8}\b""")
+    private val balanceRegex = Regex("""(?i)(?:[$€£₹]|rs\.?|inr|usd)\s*[\d,]+(?:\.\d{1,2})?""")
+
+    private fun scheduleSensitiveFieldScan() {
+        sensitiveScanJob?.cancel()
+        sensitiveScanJob = serviceScope.launch(Dispatchers.Default) {
+            delay(280) // 280ms debounce so typing/scrolling doesn't hammer CPU
+            val root = try { rootInActiveWindow } catch (_: Exception) { null } ?: return@launch
+            val foundBounds = mutableListOf<android.graphics.RectF>()
+            val nodeCount = intArrayOf(0)
+            try {
+                scanNodeHierarchy(root, 0, foundBounds, nodeCount)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error in scanNodeHierarchy", e)
+            } finally {
+                try { root.recycle() } catch (_: Exception) {}
+            }
+            withContext(Dispatchers.Main) {
+                overlay?.setSensitiveFieldRects(foundBounds)
+            }
+        }
+    }
+
+    private fun scanNodeHierarchy(
+        node: android.view.accessibility.AccessibilityNodeInfo?,
+        depth: Int,
+        outBounds: MutableList<android.graphics.RectF>,
+        count: IntArray
+    ) {
+        if (node == null || depth > 10 || count[0] > 120) return
+        count[0]++
+
+        var isSensitive = false
+        if (preferencesManager.isAiShieldPasswordsEnabled && node.isPassword) {
+            isSensitive = true
+        }
+
+        val text = node.text?.toString() ?: node.contentDescription?.toString()
+        if (!isSensitive && !text.isNullOrBlank()) {
+            if (preferencesManager.isAiShieldCardsEnabled && cardRegex.containsMatchIn(text)) {
+                isSensitive = true
+            } else if (preferencesManager.isAiShieldOtpsEnabled && otpRegex.containsMatchIn(text)) {
+                isSensitive = true
+            } else if (preferencesManager.isAiShieldBalancesEnabled && balanceRegex.containsMatchIn(text)) {
+                isSensitive = true
+            }
+        }
+
+        if (isSensitive) {
+            val r = android.graphics.Rect()
+            node.getBoundsInScreen(r)
+            if (!r.isEmpty && r.width() > 0 && r.height() > 0) {
+                val pad = 4
+                outBounds.add(
+                    android.graphics.RectF(
+                        (r.left - pad).toFloat(),
+                        (r.top - pad).toFloat(),
+                        (r.right + pad).toFloat(),
+                        (r.bottom + pad).toFloat()
+                    )
+                )
+            }
+        }
+
+        val childCount = node.childCount
+        for (i in 0 until childCount) {
+            val child = try { node.getChild(i) } catch (_: Exception) { null }
+            if (child != null) {
+                scanNodeHierarchy(child, depth + 1, outBounds, count)
+                try { child.recycle() } catch (_: Exception) {}
             }
         }
     }
@@ -248,6 +349,7 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         Log.d(TAG, "Service onDestroy")
         preferencesManager.unregisterOnSharedPreferenceChangeListener(prefsListener)
         pendingCheckJob?.cancel()
+        sensitiveScanJob?.cancel()
         overlayShownForPackage = null
         overlay?.hide()
         overlay = null

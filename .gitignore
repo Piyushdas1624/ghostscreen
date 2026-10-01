@@ -34,3 +34,5 @@ phoneicon.svg
 gs_home.png
 ui_dump.xml
 .tmp_shots/
+.playwright-cli/
+test_suite.js

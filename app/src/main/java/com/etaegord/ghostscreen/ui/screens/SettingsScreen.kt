@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.etaegord.ghostscreen.data.PreferencesManager
+import com.etaegord.ghostscreen.util.CrashLogger
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +59,12 @@ fun SettingsScreen(
     // Blur mode: mutually exclusive with solid color
     var blurEnabled         by remember { mutableStateOf(preferencesManager.isBlurEnabled) }
     var showColorPicker     by remember { mutableStateOf(false) }
+
+    var isTiltShieldEnabled     by remember { mutableStateOf(preferencesManager.isTiltShieldEnabled) }
+    var tiltAngleThreshold      by remember { mutableStateOf(preferencesManager.tiltAngleThreshold) }
+    var isPanicShakeEnabled     by remember { mutableStateOf(preferencesManager.isPanicShakeEnabled) }
+    var isNotificationShieldEnabled by remember { mutableStateOf(preferencesManager.isNotificationShieldEnabled) }
+    var testLogResult           by remember { mutableStateOf<String?>(null) }
 
     // Preset swatches: name, hex, Color
     data class Swatch(val name: String, val hex: String, val color: Color)
@@ -402,6 +409,111 @@ fun SettingsScreen(
                     BehaviorRow("Launch on boot", "Start background service automatically", launchOnBoot) { launchOnBoot = it; preferencesManager.isLaunchOnBootEnabled = it }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     BehaviorRow("Haptic feedback", "Vibrate on mask activation & controls", vibrateOnActivation) { vibrateOnActivation = it; preferencesManager.isVibrateOnActivationEnabled = it }
+                }
+            }
+
+            // ── Privacy Sensors & Quick Shields ─────────────────────────────
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(24.dp),
+                colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                        Text("Sensors & Shielding", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    BehaviorRow(
+                        label = "Tilt Shoulder-Surfer Shield",
+                        sublabel = "6-DoF sensor fusion triggers 100% OLED blackout when phone is tilted sideways past 40°",
+                        checked = isTiltShieldEnabled
+                    ) {
+                        isTiltShieldEnabled = it
+                        preferencesManager.isTiltShieldEnabled = it
+                    }
+
+                    AnimatedVisibility(visible = isTiltShieldEnabled) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Trigger Angle", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${tiltAngleThreshold}° (10° hysteresis)", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Slider(
+                                value = tiltAngleThreshold.toFloat(),
+                                onValueChange = {
+                                    tiltAngleThreshold = it.toInt()
+                                    preferencesManager.tiltAngleThreshold = it.toInt()
+                                },
+                                valueRange = 25f..60f,
+                                steps = 6
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    BehaviorRow(
+                        label = "Panic Double-Shake",
+                        sublabel = "Two rapid shakes instantly blacks out display, mutes audio, and purges clipboard",
+                        checked = isPanicShakeEnabled
+                    ) {
+                        isPanicShakeEnabled = it
+                        preferencesManager.isPanicShakeEnabled = it
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    BehaviorRow(
+                        label = "Notification Privacy Shield",
+                        sublabel = "Deploys an inverse-box mask over incoming heads-up banners while keeping running apps interactive",
+                        checked = isNotificationShieldEnabled
+                    ) {
+                        isNotificationShieldEnabled = it
+                        preferencesManager.isNotificationShieldEnabled = it
+                    }
+                }
+            }
+
+            // ── Crash & Diagnostics Card ──────────────────────────────────
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(24.dp),
+                colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Default.BugReport, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                        Text("Diagnostics & Crash Logs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    Text(
+                        text = "Stack traces and diagnostic reports are recorded to your device's internal storage:\nDownloads/ghostscreen logs",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            val path = CrashLogger.recordTestLog(context)
+                            testLogResult = path
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Generate Test Diagnostic Log")
+                    }
+
+                    testLogResult?.let { path ->
+                        Text(
+                            text = "✓ Log saved to: $path",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

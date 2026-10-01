@@ -6,17 +6,16 @@ import android.content.pm.ResolveInfo
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,6 +59,12 @@ fun SmartMaskSettingsScreen(
     
     var searchQuery by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
+
+    var isAiSensitiveShieldingEnabled by remember { mutableStateOf(preferencesManager.isAiSensitiveShieldingEnabled) }
+    var isAiShieldPasswordsEnabled by remember { mutableStateOf(preferencesManager.isAiShieldPasswordsEnabled) }
+    var isAiShieldCardsEnabled by remember { mutableStateOf(preferencesManager.isAiShieldCardsEnabled) }
+    var isAiShieldOtpsEnabled by remember { mutableStateOf(preferencesManager.isAiShieldOtpsEnabled) }
+    var isAiShieldBalancesEnabled by remember { mutableStateOf(preferencesManager.isAiShieldBalancesEnabled) }
     
     var appList by remember { mutableStateOf<List<AppItemInfo>>(emptyList()) }
     val protectedApps by db.appDao().getAllProtectedApps().collectAsState(initial = emptyList())
@@ -304,7 +309,117 @@ fun SmartMaskSettingsScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            
+            // AI Sensitive Field Auto-Shielding Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 4.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isAiSensitiveShieldingEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    else MaterialTheme.colorScheme.surfaceContainerLow
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "AI Sensitive Field Shielding",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Auto-drops micro-shields over passwords, cards, OTPs & balances (<0.5% CPU)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isAiSensitiveShieldingEnabled,
+                            onCheckedChange = {
+                                isAiSensitiveShieldingEnabled = it
+                                preferencesManager.isAiSensitiveShieldingEnabled = it
+                            }
+                        )
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(visible = isAiSensitiveShieldingEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                FilterChip(
+                                    selected = isAiShieldPasswordsEnabled,
+                                    onClick = {
+                                        isAiShieldPasswordsEnabled = !isAiShieldPasswordsEnabled
+                                        preferencesManager.isAiShieldPasswordsEnabled = isAiShieldPasswordsEnabled
+                                    },
+                                    label = { Text("Passwords", fontSize = 11.sp, maxLines = 1) }
+                                )
+                                FilterChip(
+                                    selected = isAiShieldCardsEnabled,
+                                    onClick = {
+                                        isAiShieldCardsEnabled = !isAiShieldCardsEnabled
+                                        preferencesManager.isAiShieldCardsEnabled = isAiShieldCardsEnabled
+                                    },
+                                    label = { Text("Cards", fontSize = 11.sp, maxLines = 1) }
+                                )
+                                FilterChip(
+                                    selected = isAiShieldOtpsEnabled,
+                                    onClick = {
+                                        isAiShieldOtpsEnabled = !isAiShieldOtpsEnabled
+                                        preferencesManager.isAiShieldOtpsEnabled = isAiShieldOtpsEnabled
+                                    },
+                                    label = { Text("OTPs", fontSize = 11.sp, maxLines = 1) }
+                                )
+                                FilterChip(
+                                    selected = isAiShieldBalancesEnabled,
+                                    onClick = {
+                                        isAiShieldBalancesEnabled = !isAiShieldBalancesEnabled
+                                        preferencesManager.isAiShieldBalancesEnabled = isAiShieldBalancesEnabled
+                                    },
+                                    label = { Text("Balances", fontSize = 11.sp, maxLines = 1) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Pill-shaped Search Bar
             OutlinedTextField(
                 value = searchQuery,

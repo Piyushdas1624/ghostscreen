@@ -52,6 +52,19 @@ class PreferencesManager(context: Context) {
         private const val KEY_DISCLAIMER_UNDERSTOOD = "disclaimer_understood"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
 
+        // Next-Gen Privacy Suite Keys
+        private const val KEY_OVERLAY_MODE = "overlay_mode"
+        private const val KEY_SPOTLIGHT_RADIUS_DP = "spotlight_radius_dp"
+        private const val KEY_TILT_SHIELD_ENABLED = "tilt_shield_enabled"
+        private const val KEY_TILT_ANGLE_THRESHOLD = "tilt_angle_threshold"
+        private const val KEY_PANIC_SHAKE_ENABLED = "panic_shake_enabled"
+        private const val KEY_AI_SENSITIVE_SHIELDING_ENABLED = "ai_sensitive_shielding_enabled"
+        private const val KEY_AI_SHIELD_PASSWORDS = "ai_shield_passwords"
+        private const val KEY_AI_SHIELD_CARDS = "ai_shield_cards"
+        private const val KEY_AI_SHIELD_OTPS = "ai_shield_otps"
+        private const val KEY_AI_SHIELD_BALANCES = "ai_shield_balances"
+        private const val KEY_NOTIFICATION_SHIELD_ENABLED = "notification_shield_enabled"
+
         @Volatile
         private var instance: PreferencesManager? = null
 
@@ -209,6 +222,50 @@ class PreferencesManager(context: Context) {
     var isDynamicColorEnabled: Boolean
         get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
         set(value) = edit { putBoolean(KEY_DYNAMIC_COLOR, value) }
+
+    var overlayModeName: String
+        get() = prefs.getString(KEY_OVERLAY_MODE, "SPLIT") ?: "SPLIT"
+        set(value) = edit { putString(KEY_OVERLAY_MODE, value) }
+
+    var spotlightRadiusDp: Int
+        get() = prefs.getInt(KEY_SPOTLIGHT_RADIUS_DP, 95)
+        set(value) = edit { putInt(KEY_SPOTLIGHT_RADIUS_DP, value.coerceIn(50, 200)) }
+
+    var isTiltShieldEnabled: Boolean
+        get() = prefs.getBoolean(KEY_TILT_SHIELD_ENABLED, false)
+        set(value) = edit { putBoolean(KEY_TILT_SHIELD_ENABLED, value) }
+
+    var tiltAngleThreshold: Int
+        get() = prefs.getInt(KEY_TILT_ANGLE_THRESHOLD, 40)
+        set(value) = edit { putInt(KEY_TILT_ANGLE_THRESHOLD, value.coerceIn(20, 70)) }
+
+    var isPanicShakeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PANIC_SHAKE_ENABLED, false)
+        set(value) = edit { putBoolean(KEY_PANIC_SHAKE_ENABLED, value) }
+
+    var isAiSensitiveShieldingEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AI_SENSITIVE_SHIELDING_ENABLED, false)
+        set(value) = edit { putBoolean(KEY_AI_SENSITIVE_SHIELDING_ENABLED, value) }
+
+    var isAiShieldPasswordsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AI_SHIELD_PASSWORDS, true)
+        set(value) = edit { putBoolean(KEY_AI_SHIELD_PASSWORDS, value) }
+
+    var isAiShieldCardsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AI_SHIELD_CARDS, true)
+        set(value) = edit { putBoolean(KEY_AI_SHIELD_CARDS, value) }
+
+    var isAiShieldOtpsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AI_SHIELD_OTPS, true)
+        set(value) = edit { putBoolean(KEY_AI_SHIELD_OTPS, value) }
+
+    var isAiShieldBalancesEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AI_SHIELD_BALANCES, true)
+        set(value) = edit { putBoolean(KEY_AI_SHIELD_BALANCES, value) }
+
+    var isNotificationShieldEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFICATION_SHIELD_ENABLED, true)
+        set(value) = edit { putBoolean(KEY_NOTIFICATION_SHIELD_ENABLED, value) }
 
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         plainPrefs.registerOnSharedPreferenceChangeListener(listener)

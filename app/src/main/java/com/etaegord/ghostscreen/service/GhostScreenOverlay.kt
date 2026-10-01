@@ -21,6 +21,8 @@ import android.view.animation.OvershootInterpolator
 import android.view.animation.PathInterpolator
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.util.OpacityCurve
+import com.etaegord.ghostscreen.util.TiltSensorManager
+import com.etaegord.ghostscreen.util.ShakeDetector
 import kotlin.math.*
 
 /**
@@ -76,6 +78,33 @@ class GhostScreenOverlay(
     private val cornerViews = arrayOfNulls<CornerHandleView>(4)  // TL, TR, BL, BR
     private var opacityBtnView: OpacityDropView? = null
     private var exitBtnView: ExitButtonView? = null
+
+    // Spotlight mode components
+    private var spotlightGripView: SpotlightGripView? = null
+    private var spotlightX = 0f
+    private var spotlightY = 0f
+    private var spotlightRadius = 95f * density
+
+    // AI Sensitive field micro-shield capsules
+    private val sensitiveFieldRects = mutableListOf<RectF>()
+
+    // Notification Privacy Shield ("Inverse Box")
+    private var isNotificationShieldActive = false
+    private var notificationBannerHeight = 112f * density
+    private var notificationShieldTimer: Runnable? = null
+
+    // Shoulder-Surfer Tilt & Panic Double-Shake
+    private var isEmergencyBlackout = false
+    private val tiltSensorManager by lazy {
+        TiltSensorManager(context) { isBlackout ->
+            setEmergencyBlackout(isBlackout)
+        }
+    }
+    private val shakeDetector by lazy {
+        ShakeDetector(context) {
+            setEmergencyBlackout(true)
+        }
+    }
 
     private var overlayMode = Mode.SPLIT
     private var isShowing = false
@@ -184,7 +213,7 @@ class GhostScreenOverlay(
     private var exitBtnX = -1f
     private var exitBtnY = -1f
 
-    enum class Mode { SPLIT, BOX }
+    enum class Mode { SPLIT, BOX, SPOTLIGHT }
 
     companion object {
         private const val TAG         = "GhostScreenOverlay"
@@ -324,7 +353,72 @@ class GhostScreenOverlay(
         isFadingOut = false
         vibrate(VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30), -1))
 
+        if (preferencesManager.isTiltShieldEnabled) {
+            tiltSensorManager.thresholdDegrees = preferencesManager.tiltAngleThreshold
+            tiltSensorManager.isEnabled = true
+            tiltSensorManager.startListening()
+        }
+        if (preferencesManager.isPanicShakeEnabled) {
+            shakeDetector.isEnabled = true
+            shakeDetector.startListening()
+        }
+
         animOverlayFade(FULL_ALPHA)
+    }
+
+    fun setSensitiveFieldRects(rects: List<RectF>) {
+        mainHandler.post {
+            sensitiveFieldRects.clear()
+            sensitiveFieldRects.addAll(rects)
+            maskView?.invalidate()
+        }
+    }
+
+    fun showNotificationShield(bannerHeight: Float = 112f * density, durationMs: Long = 4500L) {
+        mainHandler.post {
+            if (!preferencesManager.isNotificationShieldEnabled) return@post
+            notificationBannerHeight = bannerHeight
+            isNotificationShieldActive = true
+            if (!isShowing) {
+                updateScreenDimensions()
+                if (maskView == null) {
+                    addMask()
+                }
+            }
+            maskView?.invalidate()
+            notificationShieldTimer?.let { mainHandler.removeCallbacks(it) }
+            val timer = Runnable {
+                hideNotificationShield()
+            }
+            notificationShieldTimer = timer
+            mainHandler.postDelayed(timer, durationMs)
+        }
+    }
+
+    fun hideNotificationShield() {
+        mainHandler.post {
+            notificationShieldTimer?.let { mainHandler.removeCallbacks(it) }
+            notificationShieldTimer = null
+            if (!isNotificationShieldActive) return@post
+            isNotificationShieldActive = false
+            if (!isShowing) {
+                maskView?.let { safeRemove(it) }
+                maskView = null
+            } else {
+                maskView?.invalidate()
+            }
+        }
+    }
+
+    fun setEmergencyBlackout(active: Boolean) {
+        mainHandler.post {
+            if (isEmergencyBlackout == active) return@post
+            isEmergencyBlackout = active
+            if (active) {
+                vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 40, 60), -1))
+            }
+            maskView?.invalidate()
+        }
     }
 
     fun hide() {
@@ -356,7 +450,11 @@ class GhostScreenOverlay(
     private fun doTeardown() {
         removeSplitWindows()
         removeBoxWindows()
+        removeSpotlightWindows()
         removeMaskWindows()
+        tiltSensorManager.stopListening()
+        shakeDetector.stopListening()
+        isEmergencyBlackout = false
         maskView?.let { safeRemove(it) }; maskView = null
         exitBtnView?.let { safeRemove(it) }; exitBtnView = null
 
@@ -405,6 +503,11 @@ class GhostScreenOverlay(
                 boxRight = boxLeft + bw
                 boxBottom = boxTop + bh
                 updateCornerPositions()
+            }
+            Mode.SPOTLIGHT -> {
+                spotlightX = spotlightX.coerceIn(spotlightRadius, screenW - spotlightRadius)
+                spotlightY = spotlightY.coerceIn(spotlightRadius, screenH - spotlightRadius)
+                updateSpotlightGripPosition()
             }
         }
         maskView?.invalidate()
@@ -587,6 +690,37 @@ class GhostScreenOverlay(
         mainHandler.removeCallbacks(dimRun); mainHandler.removeCallbacks(editDimRun)
         for (i in 0..3) { cornerViews[i]?.let { safeRemove(it) }; cornerViews[i] = null }
         opacityBtnView?.let { safeRemove(it) }; opacityBtnView = null
+    }
+
+    private fun addSpotlightWindows() {
+        val gripW = (84f * density).toInt()
+        val gripH = (40f * density).toInt()
+        val gx = (spotlightX - gripW / 2f).toInt().coerceIn(0, screenW - gripW)
+        val gy = (spotlightY + spotlightRadius + 12f * density).toInt().coerceIn(0, screenH - gripH)
+        spotlightGripView = SpotlightGripView(context).also {
+            safeAdd(it, activeParams(gripW, gripH).apply {
+                x = gx
+                y = gy
+            })
+        }
+    }
+
+    private fun removeSpotlightWindows() {
+        spotlightGripView?.let { safeRemove(it) }
+        spotlightGripView = null
+    }
+
+    private fun updateSpotlightGripPosition() {
+        spotlightGripView?.let {
+            val gripW = (84f * density).toInt()
+            val gripH = (40f * density).toInt()
+            val p = it.layoutParams as WindowManager.LayoutParams
+            p.x = (spotlightX - gripW / 2f).toInt().coerceIn(0, screenW - gripW)
+            val preferredY = (spotlightY + spotlightRadius + 12f * density).toInt()
+            p.y = if (preferredY <= screenH - gripH - 12 * density) preferredY else (spotlightY - spotlightRadius - gripH - 12f * density).toInt().coerceAtLeast(0)
+            safeUpdate(it)
+            it.invalidate()
+        }
     }
 
     private fun addExitButton() {
@@ -812,6 +946,41 @@ class GhostScreenOverlay(
         modeSwitchAnimator?.start()
     }
 
+    fun enterSpotlightMode() {
+        if (overlayMode == Mode.SPOTLIGHT) return
+        vibrate(VibrationEffect.createWaveform(longArrayOf(0, 30, 40, 60), -1))
+        overlayMode = Mode.SPOTLIGHT
+        preferencesManager.overlayModeName = "SPOTLIGHT"
+
+        spotlightRadius = (preferencesManager.spotlightRadiusDp * density).coerceIn(40 * density, screenW * 0.45f)
+        spotlightX = screenW / 2f
+        spotlightY = screenH / 2f
+
+        removeSplitWindows()
+        removeBoxWindows()
+        removeMaskWindows()
+        addSpotlightWindows()
+        maskView?.invalidate()
+    }
+
+    fun enterSplitModeDirect() {
+        if (overlayMode == Mode.SPLIT) return
+        vibrate(VibrationEffect.createWaveform(longArrayOf(0, 20, 40, 20), -1))
+        overlayMode = Mode.SPLIT
+        preferencesManager.overlayModeName = "SPLIT"
+
+        val half = (preferencesManager.cutoutHeightPct / 2f).coerceIn(0.02f, 0.45f)
+        stripTopY = ((preferencesManager.cutoutYPct - half) * screenH).coerceIn(0f, screenH.toFloat())
+        stripBotY = ((preferencesManager.cutoutYPct + half) * screenH).coerceIn(0f, screenH.toFloat())
+
+        removeBoxWindows()
+        removeSpotlightWindows()
+        removeMaskWindows()
+        addMaskWindows()
+        addSplitWindows()
+        maskView?.invalidate()
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // Shared corner dimming (controlled from any corner)
     // ══════════════════════════════════════════════════════════════════
@@ -929,6 +1098,39 @@ class GhostScreenOverlay(
         private val edgeP  = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f * density }
 
         override fun onDraw(canvas: Canvas) {
+            val sw = width.toFloat().coerceAtLeast(screenW.toFloat())
+            val sh = height.toFloat().coerceAtLeast(screenH.toFloat())
+
+            // 1. Emergency Blackout (6-DoF Tilt / Panic Shake)
+            if (isEmergencyBlackout) {
+                canvas.drawColor(Color.BLACK)
+                val accent = getDynamicAccentColor()
+                val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.WHITE
+                    textSize = 14f * density
+                    textAlign = Paint.Align.CENTER
+                    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                }
+                val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = 2f * density
+                    color = accent
+                }
+                val badgeBg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = 0xEE161426.toInt()
+                }
+                val cy = sh / 2f
+                val cx = sw / 2f
+                val badgeW = 280f * density
+                val badgeH = 50f * density
+                val r = RectF(cx - badgeW / 2, cy - badgeH / 2, cx + badgeW / 2, cy + badgeH / 2)
+                canvas.drawRoundRect(r, 25f * density, 25f * density, badgeBg)
+                canvas.drawRoundRect(r, 25f * density, 25f * density, badgePaint)
+                canvas.drawText("🛡️ TILT SHIELD LOCK (Upright to restore)", cx, cy + 5f * density, warningPaint)
+                return
+            }
+
             val isBlur = preferencesManager.isBlurEnabled
             val realPct = OpacityCurve.displayToRealPct(opacity())
             val rawColor = getParsedColor()
@@ -960,28 +1162,18 @@ class GhostScreenOverlay(
                 }
             }
 
-            val sw = width.toFloat().coerceAtLeast(screenW.toFloat())
-            val sh = height.toFloat().coerceAtLeast(screenH.toFloat())
-
+            // Mode Rendering
             when (overlayMode) {
                 Mode.SPLIT -> {
-                    // Top mask
                     drawMaskRect(0f, 0f, sw, stripTopY)
-                    // Bottom mask
                     drawMaskRect(0f, stripBotY, sw, sh)
                 }
                 Mode.BOX -> {
-                    // 4 disjoint non-overlapping mask regions:
-                    // 1. Top region (full screen width above the box)
                     drawMaskRect(0f, 0f, sw, boxTop)
-                    // 2. Bottom region (full screen width below the box)
                     drawMaskRect(0f, boxBottom, sw, sh)
-                    // 3. Left region (between boxTop and boxBottom, to the left of the box)
                     drawMaskRect(0f, boxTop, boxLeft, boxBottom)
-                    // 4. Right region (between boxTop and boxBottom, to the right of the box)
                     drawMaskRect(boxRight, boxTop, sw, boxBottom)
 
-                    // Box border outline
                     val accent = getDynamicAccentColor()
                     val accentShadow = getDynamicAccentShadowColor()
                     val effectiveAlpha = ((cornerAlpha_ / 255f) * (overlayAlpha / 255f) * 255).toInt()
@@ -992,6 +1184,62 @@ class GhostScreenOverlay(
                     canvas.drawRect(boxLeft, boxTop, boxRight, boxBottom, edgeP)
                     edgeP.clearShadowLayer()
                 }
+                Mode.SPOTLIGHT -> {
+                    val spotlightPath = Path().apply {
+                        fillType = Path.FillType.EVEN_ODD
+                        addRect(0f, 0f, sw, sh, Path.Direction.CW)
+                        addCircle(spotlightX, spotlightY, spotlightRadius, Path.Direction.CCW)
+                    }
+                    canvas.drawPath(spotlightPath, fillP)
+                    if (isBlur) {
+                        canvas.drawPath(spotlightPath, noiseP)
+                    }
+
+                    val accent = getDynamicAccentColor()
+                    val accentShadow = getDynamicAccentShadowColor()
+                    val effectiveAlpha = ((cornerAlpha_ / 255f) * (overlayAlpha / 255f) * 255).toInt()
+
+                    edgeP.color = accent
+                    edgeP.alpha = effectiveAlpha
+                    edgeP.setShadowLayer(6 * density, 0f, 0f, accentShadow)
+                    canvas.drawCircle(spotlightX, spotlightY, spotlightRadius, edgeP)
+                    edgeP.clearShadowLayer()
+                }
+            }
+
+            // ── AI Sensitive Field Micro-Shields ──
+            if (sensitiveFieldRects.isNotEmpty()) {
+                val accent = getDynamicAccentColor()
+                for (fRect in sensitiveFieldRects) {
+                    canvas.drawRoundRect(fRect, 6f * density, 6f * density, fillP)
+                    edgeP.color = accent
+                    edgeP.alpha = (overlayAlpha * 0.7f).toInt()
+                    canvas.drawRoundRect(fRect, 6f * density, 6f * density, edgeP)
+                }
+            }
+
+            // ── Notification Privacy Shield ("Inverse Box") ──
+            if (isNotificationShieldActive) {
+                val bannerRect = RectF(12f * density, 8f * density, sw - 12f * density, notificationBannerHeight)
+                canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, fillP)
+                if (isBlur) {
+                    canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, noiseP)
+                }
+                val accent = getDynamicAccentColor()
+                edgeP.color = accent
+                edgeP.alpha = 220
+                edgeP.setShadowLayer(4 * density, 0f, 0f, getDynamicAccentShadowColor())
+                canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, edgeP)
+                edgeP.clearShadowLayer()
+
+                val notifTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.WHITE
+                    textSize = 12f * density
+                    textAlign = Paint.Align.CENTER
+                    typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                    alpha = 220
+                }
+                canvas.drawText("🔒 Notification Obscured for Privacy", sw / 2f, notificationBannerHeight / 2f + 4f * density, notifTextPaint)
             }
         }
     }
@@ -1410,7 +1658,7 @@ class GhostScreenOverlay(
         }
 
         private val idleRun  = Runnable { animDropAlpha(DROP_DIM_ALPHA) }
-        private val longRun  = Runnable { bump(); enterSplitMode() }
+        private val longRun  = Runnable { bump(); enterSpotlightMode() }
 
         init { setLayerType(LAYER_TYPE_SOFTWARE, null); scheduleIdle() }
 
@@ -1577,6 +1825,157 @@ class GhostScreenOverlay(
                         btnAlpha = 95; invalidate()
                     }
                     dragging = false
+                    return true
+                }
+            }
+            return false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // VIEW 5 — Spotlight Torch Grip Handle (SPOTLIGHT mode)
+    // Draggable pill positioned on the outer rim of the circular aperture
+    // ══════════════════════════════════════════════════════════════════
+    @SuppressLint("ViewConstructor")
+    private inner class SpotlightGripView(ctx: Context) : View(ctx) {
+        private var btnAlpha = FULL_ALPHA
+        private var btnAlphaAnimator: ValueAnimator? = null
+        private var startRawX = 0f
+        private var startRawY = 0f
+        private var startSpotX = 0f
+        private var startSpotY = 0f
+        private var isDragging = false
+
+        private val bgP = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = COLOR_DROP_BG }
+        private val ringP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 1.8f * density
+            color = COLOR_DROP_RING
+        }
+        private val iconP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.WHITE
+        }
+        private val textP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 12.5f * density
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        }
+        private val pillRect = RectF()
+
+        private val idleRun = Runnable { animAlpha(DROP_DIM_ALPHA) }
+        private val longRun = Runnable { bump(); enterSplitModeDirect() }
+
+        init {
+            setLayerType(LAYER_TYPE_SOFTWARE, null)
+            scheduleIdle()
+        }
+
+        private fun scheduleIdle() {
+            mainHandler.removeCallbacks(idleRun)
+            mainHandler.postDelayed(idleRun, IDLE_MS)
+        }
+
+        fun wakeUp() {
+            mainHandler.removeCallbacks(idleRun)
+            animAlpha(FULL_ALPHA)
+            scheduleIdle()
+        }
+
+        private fun animAlpha(targetAlpha: Int) {
+            btnAlphaAnimator?.cancel()
+            val start = btnAlpha
+            if (start == targetAlpha) return
+            btnAlphaAnimator = ValueAnimator.ofInt(start, targetAlpha).apply {
+                duration = 260L
+                addUpdateListener { va ->
+                    if (!isShowing) return@addUpdateListener
+                    btnAlpha = va.animatedValue as Int
+                    invalidate()
+                }
+                start()
+            }
+        }
+
+        override fun onDetachedFromWindow() {
+            super.onDetachedFromWindow()
+            mainHandler.removeCallbacks(idleRun)
+            mainHandler.removeCallbacks(longRun)
+            btnAlphaAnimator?.cancel()
+            btnAlphaAnimator = null
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            val w = width.toFloat()
+            val h = height.toFloat()
+            val pad = 3f * density
+            pillRect.set(pad, pad, w - pad, h - pad)
+            val cornerR = (h - 2 * pad) / 2f
+
+            val effectiveAlpha = ((btnAlpha / 255f) * (overlayAlpha / 255f) * 255).toInt()
+            val surfaceColor = getDynamicSurfaceContainerColor()
+            val accentRingColor = getDynamicAccentRingColor()
+            val accentColor = getDynamicAccentColor()
+            val shadowColor = getDynamicAccentShadowColor()
+
+            bgP.color = surfaceColor
+            bgP.alpha = ((overlayAlpha / 255f) * 255).toInt().coerceIn(0, 255)
+            bgP.setShadowLayer(6 * density, 0f, 2 * density, shadowColor)
+            canvas.drawRoundRect(pillRect, cornerR, cornerR, bgP)
+            bgP.clearShadowLayer()
+
+            ringP.color = accentRingColor
+            ringP.alpha = effectiveAlpha
+            canvas.drawRoundRect(pillRect, cornerR, cornerR, ringP)
+
+            // Torch Icon
+            val iconCx = pad + cornerR * 0.95f
+            val iconCy = h / 2f
+            iconP.color = accentColor
+            iconP.alpha = effectiveAlpha
+            canvas.drawCircle(iconCx, iconCy, 5f * density, iconP)
+
+            // Text: Opacity %
+            val textCx = iconCx + cornerR + 13 * density
+            val textCy = iconCy - (textP.descent() + textP.ascent()) / 2f
+            textP.alpha = effectiveAlpha
+            canvas.drawText(pctStrings[opacity()], textCx, textCy, textP)
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouchEvent(e: MotionEvent): Boolean {
+            when (e.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    wakeUp()
+                    tick()
+                    startRawX = e.rawX
+                    startRawY = e.rawY
+                    startSpotX = spotlightX
+                    startSpotY = spotlightY
+                    isDragging = false
+                    mainHandler.postDelayed(longRun, 520L)
+                    return true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = e.rawX - startRawX
+                    val dy = e.rawY - startRawY
+                    if (!isDragging && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
+                        isDragging = true
+                        mainHandler.removeCallbacks(longRun)
+                    }
+                    if (isDragging) {
+                        spotlightX = (startSpotX + dx).coerceIn(spotlightRadius, screenW - spotlightRadius)
+                        spotlightY = (startSpotY + dy).coerceIn(spotlightRadius, screenH - spotlightRadius)
+                        updateSpotlightGripPosition()
+                        maskView?.invalidate()
+                    }
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    mainHandler.removeCallbacks(longRun)
+                    scheduleIdle()
+                    isDragging = false
                     return true
                 }
             }
