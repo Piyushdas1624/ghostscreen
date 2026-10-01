@@ -64,6 +64,7 @@ fun SettingsScreen(
     var tiltAngleThreshold      by remember { mutableStateOf(preferencesManager.tiltAngleThreshold) }
     var isPanicShakeEnabled     by remember { mutableStateOf(preferencesManager.isPanicShakeEnabled) }
     var isNotificationShieldEnabled by remember { mutableStateOf(preferencesManager.isNotificationShieldEnabled) }
+    var overlayModeName         by remember { mutableStateOf(preferencesManager.overlayModeName) }
     var testLogResult           by remember { mutableStateOf<String?>(null) }
 
     // Preset swatches: name, hex, Color
@@ -132,8 +133,45 @@ fun SettingsScreen(
                         Text("Mask Appearance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
 
-                    // ── Segmented mode selector ────────────────────────────
-                    Text("Mask Mode", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // ── Geometry mode selector ──────────────────────────────
+                    Text("Mask Geometry", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
+                        val modes = listOf("SPLIT" to "Split", "BOX" to "Box", "SPOTLIGHT" to "Spotlight")
+                        modes.forEach { (modeKey, label) ->
+                            val isSelected = overlayModeName.equals(modeKey, ignoreCase = true)
+                            val bg by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                label = "modeBg_$modeKey"
+                            )
+                            val fg by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                label = "modeFg_$modeKey"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .background(bg)
+                                    .clickable {
+                                        overlayModeName = modeKey
+                                        preferencesManager.overlayModeName = modeKey
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = fg)
+                            }
+                        }
+                    }
+
+                    // ── Segmented style selector ────────────────────────────
+                    Text("Mask Style", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

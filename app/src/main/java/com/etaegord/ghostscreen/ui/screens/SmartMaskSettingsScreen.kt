@@ -39,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.os.Build
+import android.view.inputmethod.InputMethodManager
 
 data class AppItemInfo(
     val packageName: String,
@@ -172,13 +173,33 @@ fun SmartMaskSettingsScreen(
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
             
-            val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
+            val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.queryIntentActivities(
+                    mainIntent,
+                    android.content.pm.PackageManager.ResolveInfoFlags.of(android.content.pm.PackageManager.MATCH_ALL.toLong())
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                pm.queryIntentActivities(mainIntent, android.content.pm.PackageManager.MATCH_ALL)
+            }
             
             // Common messaging / privacy sensitive app keywords or packages
             val suggestedKeywords = listOf(
                 "whatsapp", "telegram", "messenger", "instagram", "snapchat", 
                 "facebook", "message", "signal", "discord", "viber", "skype", "slack",
-                "bank", "wallet", "pay", "secure", "contacts", "gallery", "photo"
+                "bank", "wallet", "pay", "secure", "contacts", "gallery", "photo",
+                "browser", "chrome", "firefox", "brave", "opera", "edge", "dialer",
+                "phone", "gboard", "keyboard", "input"
+            )
+            val topPrivacyPackagePrefixes = listOf(
+                "com.whatsapp", "org.telegram", "org.thoughtcrime.securesms",
+                "com.google.android.apps.messaging", "com.android.mms", "com.transsion.smartmessage",
+                "com.instagram.android", "com.snapchat.android", "com.facebook.orca",
+                "com.google.android.apps.nbu.paisa.user", "com.phonepe.app", "net.one97.paytm",
+                "com.paypal.android.p2pmobile", "in.org.npci.upiapp", "com.android.chrome",
+                "org.mozilla.firefox", "com.brave.browser", "com.google.android.inputmethod.latin",
+                "com.samsung.android.honeyboard", "com.touchtype.swiftkey", "com.kika.keyboard",
+                "com.android.systemui", "com.transsion.systemui", "com.miui.systemui"
             )
 
             val loadedApps = resolveInfos.mapNotNull { resolveInfo ->
@@ -195,6 +216,8 @@ fun SmartMaskSettingsScreen(
 
                 val isSuggested = suggestedKeywords.any { keyword ->
                     packageName.contains(keyword, ignoreCase = true) || appName.contains(keyword, ignoreCase = true)
+                } || topPrivacyPackagePrefixes.any { prefix ->
+                    packageName.startsWith(prefix, ignoreCase = true)
                 }
 
                 AppItemInfo(packageName, appName, icon, isSuggested)
@@ -233,6 +256,47 @@ fun SmartMaskSettingsScreen(
                     } catch (_: Exception) {}
                 }
             }
+
+            // Also query installed keyboards via InputMethodManager
+            try {
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                val imis = imm?.inputMethodList ?: emptyList()
+                for (imi in imis) {
+                    val pkg = imi.packageName
+                    if (loadedApps.none { it.packageName == pkg }) {
+                        val label = try { imi.loadLabel(pm).toString() } catch (_: Exception) { "Keyboard" }
+                        val icon = try { imi.loadIcon(pm) } catch (_: Exception) { null }
+                        loadedApps.add(AppItemInfo(pkg, label, icon, isSuggested = true))
+                    }
+                }
+            } catch (_: Exception) {}
+
+            // Also query all installed applications to include non-launcher apps and system components
+            try {
+                val installedApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledApplications(android.content.pm.PackageManager.ApplicationInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION") pm.getInstalledApplications(0)
+                }
+                for (appInfo in installedApps) {
+                    val pkg = appInfo.packageName
+                    if (pkg == context.packageName) continue
+                    if (loadedApps.none { it.packageName == pkg }) {
+                        val isUserApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0 ||
+                                        (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                        val name = try { appInfo.loadLabel(pm).toString() } catch (_: Exception) { pkg }
+                        val isSuggested = suggestedKeywords.any { keyword ->
+                            pkg.contains(keyword, ignoreCase = true) || name.contains(keyword, ignoreCase = true)
+                        } || topPrivacyPackagePrefixes.any { prefix ->
+                            pkg.startsWith(prefix, ignoreCase = true)
+                        }
+                        if (isUserApp || isSuggested) {
+                            val icon = try { pm.getApplicationIcon(appInfo) } catch (_: Exception) { null }
+                            loadedApps.add(AppItemInfo(pkg, name, icon, isSuggested = isSuggested))
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
 
             // Sort: Alphabetical app name and ensure strictly unique packages
             val uniqueApps = loadedApps.distinctBy { it.packageName }.sortedBy { it.appName }
@@ -494,19 +558,8 @@ fun SmartMaskSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    // Suggested List Section
-                    if (suggestedApps.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Suggested for Privacy",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
-                        items(suggestedApps, key = { "sug_${it.packageName}" }) { app ->
+                    if (searchQuery.isNotBlank() || filterMode != "All") {
+                        items(filteredList, key = { it.packageName }) { app ->
                             AppRow(
                                 app = app,
                                 isProtected = protectedPackages.contains(app.packageName),
@@ -523,13 +576,42 @@ fun SmartMaskSettingsScreen(
                                 }
                             )
                         }
-                    }
+                    } else {
+                        // 1. Suggested List Section (Top Privacy Targets)
+                        if (suggestedApps.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Suggested for Privacy (${suggestedApps.size})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            
+                            items(suggestedApps, key = { "sug_${it.packageName}" }) { app ->
+                                AppRow(
+                                    app = app,
+                                    isProtected = protectedPackages.contains(app.packageName),
+                                    onToggle = { isChecked ->
+                                        scope.launch(Dispatchers.IO) {
+                                            if (isChecked) {
+                                                db.appDao().insertProtectedApp(
+                                                    ProtectedApp(app.packageName, app.appName)
+                                                )
+                                            } else {
+                                                db.appDao().deleteProtectedAppByPackage(app.packageName)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
 
-                    // Normal List Section
-                    if (normalApps.isNotEmpty()) {
+                        // 2. All Applications Section (Every installed application)
                         item {
                             Text(
-                                text = "All Applications",
+                                text = "All Applications (${filteredList.size})",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -537,7 +619,7 @@ fun SmartMaskSettingsScreen(
                             )
                         }
                         
-                        items(normalApps, key = { "norm_${it.packageName}" }) { app ->
+                        items(filteredList, key = { "all_${it.packageName}" }) { app ->
                             AppRow(
                                 app = app,
                                 isProtected = protectedPackages.contains(app.packageName),
@@ -641,12 +723,29 @@ fun AppRow(
 
                 // App Info
                 Column {
-                    Text(
-                        text = app.appName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = app.appName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (app.isSuggested) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "SUGGESTED",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = app.packageName,
                         fontSize = 11.sp,

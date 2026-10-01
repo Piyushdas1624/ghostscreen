@@ -1,8 +1,11 @@
 package com.etaegord.ghostscreen.service
 
 import android.accessibilityservice.AccessibilityService
+import android.app.Notification
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.AudioManager
+import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.etaegord.ghostscreen.data.AppDatabase
@@ -69,6 +72,32 @@ class GhostScreenAccessibilityService : AccessibilityService() {
                     overlay?.hide()
                 }
             }
+        } else if (key in setOf(
+            "tilt_shield_enabled",
+            "tilt_angle_threshold",
+            "panic_shake_enabled",
+            "notification_shield_enabled",
+            "color",
+            "blur_enabled",
+            "dynamic_color"
+        )) {
+            overlay?.reloadPreferences()
+        }
+    }
+
+    private val testReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: android.content.Intent?) {
+            when (intent?.action) {
+                "com.etaegord.ghostscreen.TEST_NOTIFICATION_SHIELD" -> {
+                    Log.i(TAG, "Test broadcast received: showing Notification Shield")
+                    overlay?.showNotificationShield()
+                }
+                "com.etaegord.ghostscreen.TEST_TILT_BLACKOUT" -> {
+                    val active = intent.getBooleanExtra("active", true)
+                    Log.i(TAG, "Test broadcast received: setEmergencyBlackout=$active")
+                    overlay?.setEmergencyBlackout(active)
+                }
+            }
         }
     }
 
@@ -80,6 +109,16 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         overlay = GhostScreenOverlay(this, preferencesManager)
         
         preferencesManager.registerOnSharedPreferenceChangeListener(prefsListener)
+
+        val filter = android.content.IntentFilter().apply {
+            addAction("com.etaegord.ghostscreen.TEST_NOTIFICATION_SHIELD")
+            addAction("com.etaegord.ghostscreen.TEST_TILT_BLACKOUT")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(testReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(testReceiver, filter)
+        }
     }
 
     override fun onServiceConnected() {
@@ -115,13 +154,67 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     private fun isSystemUiOrKeyboard(packageName: String): Boolean =
         OverlayTransition.isTransient(packageName)
 
+    private var lastNotificationShieldTriggerTime = 0L
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         // 1. Notification Privacy Shield: Detect heads-up banners and obscure
         if (event.eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
             if (preferencesManager.isNotificationShieldEnabled) {
                 val pkg = event.packageName?.toString() ?: ""
                 if (pkg != this.packageName) {
-                    overlay?.showNotificationShield()
+                    val notif = event.parcelableData as? Notification
+                    if (notif != null) {
+                        // Skip ongoing notifications (phone calls, media players, foreground services, downloads)
+                        val isOngoing = (notif.flags and (
+                            Notification.FLAG_ONGOING_EVENT or
+                            Notification.FLAG_FOREGROUND_SERVICE or
+                            Notification.FLAG_NO_CLEAR or
+                            Notification.FLAG_LOCAL_ONLY
+                        )) != 0
+                        if (isOngoing) return
+
+                        // Skip call, media, and progress categories
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            val cat = notif.category
+                            if (cat in listOf(
+                                Notification.CATEGORY_CALL,
+                                Notification.CATEGORY_TRANSPORT,
+                                Notification.CATEGORY_SERVICE,
+                                Notification.CATEGORY_PROGRESS,
+                                Notification.CATEGORY_NAVIGATION,
+                                Notification.CATEGORY_STOPWATCH
+                            )) return
+                        }
+                    }
+
+                    // Skip if an active/incoming phone or VoIP call is in progress
+                    val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                    if (audioManager != null && audioManager.mode != AudioManager.MODE_NORMAL) {
+                        return
+                    }
+
+                    // Skip dialer / telecom packages so active or incoming calls never obscure the screen
+                    val dialerPackages = setOf(
+                        "com.google.android.dialer",
+                        "com.android.dialer",
+                        "com.android.server.telecom",
+                        "com.android.incallui",
+                        "com.android.phone",
+                        "com.transsion.telecom",
+                        "com.transsion.dialer",
+                        "com.sh.smart.caller",
+                        "com.truecaller",
+                        "com.samsung.android.dialer",
+                        "com.samsung.android.incallui"
+                    )
+                    if (dialerPackages.contains(pkg)) return
+
+                    // Cooldown debounce: at most 1 notification shield trigger per 3500ms
+                    val now = System.currentTimeMillis()
+                    if (now - lastNotificationShieldTriggerTime > 3500L) {
+                        lastNotificationShieldTriggerTime = now
+                        overlay?.showNotificationShield()
+                    }
                 }
             }
             return
@@ -139,6 +232,9 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: return
             val className = event.className?.toString() ?: ""
+
+            // Dismiss transient notification privacy shield on window changes or app switches
+            overlay?.hideNotificationShield()
 
             // Ignore events from our own overlay windows to prevent infinite show/hide loops
             if (packageName == this.packageName && !className.contains("MainActivity")) {
@@ -163,8 +259,6 @@ class GhostScreenAccessibilityService : AccessibilityService() {
             currentPackageName = packageName
 
             // Cancel any pending check to debounce rapid events.
-            // Cancelling pendingCheckJob cancels the active DB query as well because
-            // checkCurrentApp is suspend (Issue #2 race condition fix).
             pendingCheckJob?.cancel()
             pendingCheckJob = serviceScope.launch {
                 // Small delay to debounce rapid window-state-change bursts
@@ -175,15 +269,30 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     }
 
     private var sensitiveScanJob: Job? = null
-    private val cardRegex = Regex("""\b(?:\d[ -]*?){13,19}\b""")
-    private val otpRegex = Regex("""(?i)\b(?:otp|code|verification|pin)\b.{0,15}\b\d{4,8}\b""")
-    private val balanceRegex = Regex("""(?i)(?:[$€£₹]|rs\.?|inr|usd)\s*[\d,]+(?:\.\d{1,2})?""")
+    // Cards: 16 digits grouped (4-4-4-4) or 15-16 continuous digits
+    private val cardRegex = Regex("""\b(?:\d{4}[ -]){3}\d{4}\b|\b\d{15,16}\b""")
+    // OTPs & PINs: require explicit OTP/verification/PIN keyword + 4-8 digit code
+    private val otpRegex = Regex("""(?i)\b(?:otp|one[- ]?time[- ]?pass(?:word)?|verification|code|pin)\b.{0,15}\b\d{4,8}\b|\b(?:otp|pin|code)[:\s]+\b\d{4,8}\b""")
+    // Balances: currency symbol or code + amount
+    private val balanceRegex = Regex("""(?i)(?:[$€£₹]|rs\.?|inr|usd|eur|gbp)\s*[\d,]+(?:\.\d{1,2})?""")
 
     private fun scheduleSensitiveFieldScan() {
         sensitiveScanJob?.cancel()
+        // If current app is GhostScreen itself, never scan or mask its own UI
+        if (currentPackageName == this.packageName) {
+            overlay?.setSensitiveFieldRects(emptyList())
+            return
+        }
         sensitiveScanJob = serviceScope.launch(Dispatchers.Default) {
             delay(280) // 280ms debounce so typing/scrolling doesn't hammer CPU
             val root = try { rootInActiveWindow } catch (_: Exception) { null } ?: return@launch
+            if (root.packageName?.toString() == this@GhostScreenAccessibilityService.packageName) {
+                try { root.recycle() } catch (_: Exception) {}
+                withContext(Dispatchers.Main) {
+                    overlay?.setSensitiveFieldRects(emptyList())
+                }
+                return@launch
+            }
             val foundBounds = mutableListOf<android.graphics.RectF>()
             val nodeCount = intArrayOf(0)
             try {
@@ -209,6 +318,8 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         count: IntArray
     ) {
         if (node == null || depth > 24 || count[0] > 300) return
+        // Never mask our own app's UI elements
+        if (node.packageName?.toString() == this.packageName) return
         count[0]++
 
         var isSensitive = false
@@ -230,7 +341,10 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         if (isSensitive) {
             val r = android.graphics.Rect()
             node.getBoundsInScreen(r)
-            if (!r.isEmpty && r.width() > 0 && r.height() > 0) {
+            // Reject whole screen containers / large cards (must be an individual data field)
+            val dm = resources.displayMetrics
+            val isTooLarge = r.width() > (dm.widthPixels * 0.90f) && r.height() > (dm.heightPixels * 0.20f)
+            if (!isTooLarge && !r.isEmpty && r.width() > 0 && r.height() > 0) {
                 val pad = 4
                 outBounds.add(
                     android.graphics.RectF(
@@ -350,6 +464,7 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "Service onDestroy")
+        try { unregisterReceiver(testReceiver) } catch (_: Exception) {}
         preferencesManager.unregisterOnSharedPreferenceChangeListener(prefsListener)
         pendingCheckJob?.cancel()
         sensitiveScanJob?.cancel()

@@ -47,6 +47,7 @@ class TiltSensorManager(
         // Prefer TYPE_GAME_ROTATION_VECTOR for pure gyro-accel fusion with centrifugal rejection
         rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
             ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+            ?: sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
             ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
@@ -81,20 +82,27 @@ class TiltSensorManager(
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (!isEnabled) return
+        if (!isEnabled) {
+            if (isCurrentlyBlackout) {
+                isCurrentlyBlackout = false
+                onTiltChanged(false)
+            }
+            return
+        }
 
         val rollDegrees = when (event.sensor.type) {
             Sensor.TYPE_GAME_ROTATION_VECTOR, Sensor.TYPE_ROTATION_VECTOR -> {
                 SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-                SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                // orientationAngles[2] is roll in radians (-pi to pi)
-                abs(Math.toDegrees(orientationAngles[2].toDouble())).toFloat()
+                // World up (0, 0, 1) in device coordinates: R^T * [0, 0, 1]^T = (R[6], R[7], R[8])
+                val gx = rotationMatrix[6]
+                val gy = rotationMatrix[7]
+                val gz = rotationMatrix[8]
+                abs(Math.toDegrees(kotlin.math.atan2(gx.toDouble(), kotlin.math.sqrt((gy * gy + gz * gz).toDouble())))).toFloat()
             }
-            Sensor.TYPE_ACCELEROMETER -> {
+            Sensor.TYPE_GRAVITY, Sensor.TYPE_ACCELEROMETER -> {
                 val ax = event.values[0]
                 val ay = event.values[1]
                 val az = event.values[2]
-                // Roll estimation from accelerometer: atan2(ax, sqrt(ay^2 + az^2))
                 val rollRad = kotlin.math.atan2(ax.toDouble(), kotlin.math.sqrt((ay * ay + az * az).toDouble()))
                 abs(Math.toDegrees(rollRad)).toFloat()
             }

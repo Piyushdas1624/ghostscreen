@@ -3,6 +3,7 @@ package com.etaegord.ghostscreen.util
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -41,6 +42,7 @@ object CrashLogger {
         val appContext = context.applicationContext
 
         createNotificationChannel(appContext)
+        purgeOldLogs(appContext, maxLogsToKeep = 3)
 
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
@@ -157,8 +159,7 @@ object CrashLogger {
     private fun writeLogContent(context: Context, baseName: String, content: String): String? {
         val fileName = "$baseName.txt"
 
-        // 1. Primary method for Android 10+ (API 29+): MediaStore.Downloads
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val resultPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val resolver = context.contentResolver
                 val contentValues = ContentValues().apply {
@@ -173,46 +174,133 @@ object CrashLogger {
                         os.flush()
                     }
                     Log.i(TAG, "Log successfully written via MediaStore to: Download/ghostscreen logs/$fileName")
-                    return "Download/ghostscreen logs/$fileName"
-                }
+                    "Download/ghostscreen logs/$fileName"
+                } else null
             } catch (e: Exception) {
                 Log.w(TAG, "MediaStore write failed, falling back to direct File API: ${e.message}")
+                null
+            }
+        } else null
+
+        val finalPath = if (resultPath != null) {
+            resultPath
+        } else {
+            // 2. Direct File API fallback
+            try {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val logsDir = File(downloadsDir, "ghostscreen logs")
+                if (!logsDir.exists()) {
+                    logsDir.mkdirs()
+                }
+                val targetFile = File(logsDir, fileName)
+                FileOutputStream(targetFile).use { fos ->
+                    fos.write(content.toByteArray(Charsets.UTF_8))
+                    fos.flush()
+                }
+                Log.i(TAG, "Log successfully written via File API to: ${targetFile.absolutePath}")
+                targetFile.absolutePath
+            } catch (e: Exception) {
+                Log.w(TAG, "Public downloads File API failed, falling back to app-specific external: ${e.message}")
+                // 3. App-specific fallback (always writable without permissions)
+                try {
+                    val appExtDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+                    val logsDir = File(appExtDir, "ghostscreen logs")
+                    if (!logsDir.exists()) logsDir.mkdirs()
+                    val targetFile = File(logsDir, fileName)
+                    FileOutputStream(targetFile).use { fos ->
+                        fos.write(content.toByteArray(Charsets.UTF_8))
+                        fos.flush()
+                    }
+                    Log.i(TAG, "Log successfully written to app files: ${targetFile.absolutePath}")
+                    targetFile.absolutePath
+                } catch (e2: Exception) {
+                    Log.e(TAG, "All log persistence attempts failed", e2)
+                    null
+                }
             }
         }
 
-        // 2. Direct File API fallback
+        if (finalPath != null) {
+            purgeOldLogs(context, maxLogsToKeep = 3)
+        }
+        return finalPath
+    }
+
+    /**
+     * Purges older diagnostic logs so only the latest 2-3 logs remain on device storage.
+     */
+    fun purgeOldLogs(context: Context, maxLogsToKeep: Int = 3) {
+        val appContext = context.applicationContext
+
+        // 1. Direct Public Downloads folder purge
         try {
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val logsDir = File(downloadsDir, "ghostscreen logs")
-            if (!logsDir.exists()) {
-                logsDir.mkdirs()
+            if (logsDir.exists() && logsDir.isDirectory) {
+                val files = logsDir.listFiles { f -> f.isFile && f.name.endsWith(".txt") }
+                    ?.sortedByDescending { it.lastModified() }
+                if (files != null && files.size > maxLogsToKeep) {
+                    for (i in maxLogsToKeep until files.size) {
+                        val deleted = files[i].delete()
+                        Log.i(TAG, "Purged old public log file: ${files[i].name} (deleted=$deleted)")
+                    }
+                }
             }
-            val targetFile = File(logsDir, fileName)
-            FileOutputStream(targetFile).use { fos ->
-                fos.write(content.toByteArray(Charsets.UTF_8))
-                fos.flush()
-            }
-            Log.i(TAG, "Log successfully written via File API to: ${targetFile.absolutePath}")
-            return targetFile.absolutePath
         } catch (e: Exception) {
-            Log.w(TAG, "Public downloads File API failed, falling back to app-specific external: ${e.message}")
+            Log.w(TAG, "Failed purging logs from public downloads", e)
         }
 
-        // 3. App-specific fallback (always writable without permissions)
+        // 2. App-specific external storage purge
         try {
-            val appExtDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+            val appExtDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: appContext.filesDir
             val logsDir = File(appExtDir, "ghostscreen logs")
-            if (!logsDir.exists()) logsDir.mkdirs()
-            val targetFile = File(logsDir, fileName)
-            FileOutputStream(targetFile).use { fos ->
-                fos.write(content.toByteArray(Charsets.UTF_8))
-                fos.flush()
+            if (logsDir.exists() && logsDir.isDirectory) {
+                val files = logsDir.listFiles { f -> f.isFile && f.name.endsWith(".txt") }
+                    ?.sortedByDescending { it.lastModified() }
+                if (files != null && files.size > maxLogsToKeep) {
+                    for (i in maxLogsToKeep until files.size) {
+                        val deleted = files[i].delete()
+                        Log.i(TAG, "Purged old app log file: ${files[i].name} (deleted=$deleted)")
+                    }
+                }
             }
-            Log.i(TAG, "Log successfully written to app files: ${targetFile.absolutePath}")
-            return targetFile.absolutePath
         } catch (e: Exception) {
-            Log.e(TAG, "All log persistence attempts failed", e)
-            return null
+            Log.w(TAG, "Failed purging app-specific logs", e)
+        }
+
+        // 3. MediaStore purge for Android 10+ (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val resolver = appContext.contentResolver
+                val uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                val projection = arrayOf(
+                    MediaStore.Downloads._ID,
+                    MediaStore.Downloads.DISPLAY_NAME,
+                    MediaStore.Downloads.DATE_ADDED
+                )
+                val selection = "(${MediaStore.Downloads.RELATIVE_PATH} LIKE ?) AND (${MediaStore.Downloads.DISPLAY_NAME} LIKE '%.txt')"
+                val selectionArgs = arrayOf("Download/ghostscreen logs%")
+                val sortOrder = "${MediaStore.Downloads.DATE_ADDED} DESC"
+
+                val idsToDelete = mutableListOf<Long>()
+                resolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                    var count = 0
+                    while (cursor.moveToNext()) {
+                        count++
+                        if (count > maxLogsToKeep) {
+                            idsToDelete.add(cursor.getLong(idCol))
+                        }
+                    }
+                }
+                for (id in idsToDelete) {
+                    val deleteUri = ContentUris.withAppendedId(uri, id)
+                    val rows = resolver.delete(deleteUri, null, null)
+                    Log.i(TAG, "Purged MediaStore log entry id: $id (deleted rows=$rows)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed purging MediaStore logs", e)
+            }
         }
     }
 

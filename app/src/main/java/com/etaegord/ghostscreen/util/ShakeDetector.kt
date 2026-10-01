@@ -40,8 +40,8 @@ class ShakeDetector(
             }
         }
 
-    // Jerk threshold in m/s³ (12 - 16 is ideal for deliberate double-shakes)
-    var jerkThreshold: Float = 14.0f
+    // Jerk threshold in m/s³ (30 - 50 is ideal for deliberate double-shakes)
+    var jerkThreshold: Float = 35.0f
 
     private var lastX = 0f
     private var lastY = 0f
