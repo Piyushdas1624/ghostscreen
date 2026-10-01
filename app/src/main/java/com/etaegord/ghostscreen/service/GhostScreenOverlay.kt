@@ -370,6 +370,17 @@ class GhostScreenOverlay(
         mainHandler.post {
             sensitiveFieldRects.clear()
             sensitiveFieldRects.addAll(rects)
+            if (sensitiveFieldRects.isNotEmpty()) {
+                if (!isShowing) {
+                    updateScreenDimensions()
+                    if (maskView == null) {
+                        addMask()
+                    }
+                }
+            } else if (!isShowing && !isNotificationShieldActive) {
+                maskView?.let { safeRemove(it) }
+                maskView = null
+            }
             maskView?.invalidate()
         }
     }
@@ -401,7 +412,7 @@ class GhostScreenOverlay(
             notificationShieldTimer = null
             if (!isNotificationShieldActive) return@post
             isNotificationShieldActive = false
-            if (!isShowing) {
+            if (!isShowing && sensitiveFieldRects.isEmpty()) {
                 maskView?.let { safeRemove(it) }
                 maskView = null
             } else {
@@ -1210,10 +1221,15 @@ class GhostScreenOverlay(
             // ── AI Sensitive Field Micro-Shields ──
             if (sensitiveFieldRects.isNotEmpty()) {
                 val accent = getDynamicAccentColor()
+                val shieldBgP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = 0xFA14121E.toInt()
+                }
+                edgeP.color = accent
+                edgeP.alpha = 220
+                edgeP.strokeWidth = 1.5f * density
                 for (fRect in sensitiveFieldRects) {
-                    canvas.drawRoundRect(fRect, 6f * density, 6f * density, fillP)
-                    edgeP.color = accent
-                    edgeP.alpha = (overlayAlpha * 0.7f).toInt()
+                    canvas.drawRoundRect(fRect, 6f * density, 6f * density, shieldBgP)
                     canvas.drawRoundRect(fRect, 6f * density, 6f * density, edgeP)
                 }
             }
@@ -1221,13 +1237,18 @@ class GhostScreenOverlay(
             // ── Notification Privacy Shield ("Inverse Box") ──
             if (isNotificationShieldActive) {
                 val bannerRect = RectF(12f * density, 8f * density, sw - 12f * density, notificationBannerHeight)
-                canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, fillP)
+                val notifBgP = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = 0xF812111A.toInt()
+                }
+                canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, notifBgP)
                 if (isBlur) {
                     canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, noiseP)
                 }
                 val accent = getDynamicAccentColor()
                 edgeP.color = accent
                 edgeP.alpha = 220
+                edgeP.strokeWidth = 2f * density
                 edgeP.setShadowLayer(4 * density, 0f, 0f, getDynamicAccentShadowColor())
                 canvas.drawRoundRect(bannerRect, 18f * density, 18f * density, edgeP)
                 edgeP.clearShadowLayer()

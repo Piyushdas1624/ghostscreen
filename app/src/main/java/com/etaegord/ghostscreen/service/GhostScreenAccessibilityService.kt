@@ -193,6 +193,9 @@ class GhostScreenAccessibilityService : AccessibilityService() {
             } finally {
                 try { root.recycle() } catch (_: Exception) {}
             }
+            if (foundBounds.isNotEmpty()) {
+                Log.d(TAG, "AI Sensitive Field Shielding detected ${foundBounds.size} fields")
+            }
             withContext(Dispatchers.Main) {
                 overlay?.setSensitiveFieldRects(foundBounds)
             }
@@ -205,7 +208,7 @@ class GhostScreenAccessibilityService : AccessibilityService() {
         outBounds: MutableList<android.graphics.RectF>,
         count: IntArray
     ) {
-        if (node == null || depth > 10 || count[0] > 120) return
+        if (node == null || depth > 24 || count[0] > 300) return
         count[0]++
 
         var isSensitive = false
