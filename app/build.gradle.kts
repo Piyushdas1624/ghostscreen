@@ -57,6 +57,13 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
     }
 
     applicationVariants.all {
@@ -96,7 +103,11 @@ dependencies {
     // Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
 
+    // WorkManager for background update checks
+    implementation(libs.work.runtime.ktx)
+
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.compose.ui.tooling)

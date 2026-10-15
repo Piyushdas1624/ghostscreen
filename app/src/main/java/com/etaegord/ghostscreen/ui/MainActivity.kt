@@ -19,9 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import android.content.Intent
 import com.etaegord.ghostscreen.data.AppDatabase
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
+import com.etaegord.ghostscreen.updater.UpdateManager
+import com.etaegord.ghostscreen.updater.UpdateNotificationHelper
 import com.etaegord.ghostscreen.util.isGhostScreenAccessibilityEnabled
 import com.etaegord.ghostscreen.ui.screens.*
 import com.etaegord.ghostscreen.ui.theme.GhostScreenTheme
@@ -97,6 +100,8 @@ class MainActivity : ComponentActivity() {
             computeStartDestination(preferencesManager, this)
         }
 
+        handleUpdateIntent(intent)
+
         setContent {
             var isDynamicColor by remember { mutableStateOf(preferencesManager.isDynamicColorEnabled) }
             DisposableEffect(preferencesManager) {
@@ -122,6 +127,38 @@ class MainActivity : ComponentActivity() {
                         startDestination = startDestination
                     )
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleUpdateIntent(intent)
+    }
+
+    private fun handleUpdateIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("mock_release", false) == true || intent?.getStringExtra("mock_release") != null) {
+            UpdateManager.getInstance(applicationContext).checkForUpdates(isManual = true, customUrl = "mock")
+            return
+        }
+        if (intent?.getBooleanExtra(UpdateNotificationHelper.EXTRA_SHOW_UPDATE, false) == true) {
+            val tag = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_TAG)
+            val downloadUrl = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_URL)
+            if (!tag.isNullOrBlank() && !downloadUrl.isNullOrBlank()) {
+                val info = com.etaegord.ghostscreen.updater.UpdateInfo(
+                    tagName = tag,
+                    versionName = tag.removePrefix("v"),
+                    title = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_TITLE) ?: tag,
+                    changelog = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_BODY) ?: "",
+                    downloadUrl = downloadUrl,
+                    apkSize = intent.getLongExtra(UpdateNotificationHelper.EXTRA_UPDATE_SIZE, 0L),
+                    publishedAt = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_DATE) ?: "",
+                    sha256 = intent.getStringExtra(UpdateNotificationHelper.EXTRA_UPDATE_SHA256)?.takeIf { it.isNotBlank() }
+                )
+                UpdateManager.getInstance(applicationContext).showUpdate(info)
+            } else {
+                UpdateManager.getInstance(applicationContext).checkForUpdates(isManual = true)
             }
         }
     }

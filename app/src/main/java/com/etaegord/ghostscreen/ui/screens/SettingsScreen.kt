@@ -30,7 +30,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.etaegord.ghostscreen.BuildConfig
 import com.etaegord.ghostscreen.data.PreferencesManager
+import com.etaegord.ghostscreen.updater.UpdateManager
+import com.etaegord.ghostscreen.updater.UpdateState
 import com.etaegord.ghostscreen.util.CrashLogger
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +70,11 @@ fun SettingsScreen(
     var overlayModeName         by remember { mutableStateOf(preferencesManager.overlayModeName) }
     var testLogResult           by remember { mutableStateOf<String?>(null) }
 
+    val updateManager = remember { UpdateManager.getInstance(context) }
+    val updateState by updateManager.updateState.collectAsState()
+    var autoCheckUpdates by remember { mutableStateOf(preferencesManager.isAutoCheckUpdatesEnabled) }
+    var downloadWifiOnly by remember { mutableStateOf(preferencesManager.isDownloadWifiOnlyEnabled) }
+
     // Preset swatches: name, hex, Color
     data class Swatch(val name: String, val hex: String, val color: Color)
     val presets = listOf(
@@ -94,6 +102,16 @@ fun SettingsScreen(
             }
         )
     }
+
+    UpdateDialog(
+        updateState = updateState,
+        onDownloadClick = { info -> updateManager.startDownload(info) },
+        onInstallClick = { file -> updateManager.installApk(file) },
+        onCancelDownload = { updateManager.cancelDownload() },
+        onRemindLater = { updateManager.dismiss() },
+        onSkipVersion = { tag -> updateManager.skipVersion(tag) },
+        onDismiss = { updateManager.dismiss() }
+    )
 
     Scaffold(
         topBar = {
@@ -551,6 +569,132 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+
+            // ── App Updates Card ───────────────────────────────────────────
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(24.dp),
+                colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.SystemUpdate,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "App Updates",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "Installed: v${BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Build ${BuildConfig.VERSION_CODE}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    BehaviorRow(
+                        label = "Auto-check for updates",
+                        sublabel = "Periodically check for new releases in background via WorkManager",
+                        checked = autoCheckUpdates
+                    ) {
+                        autoCheckUpdates = it
+                        preferencesManager.isAutoCheckUpdatesEnabled = it
+                        updateManager.syncPeriodicWork()
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    BehaviorRow(
+                        label = "Download updates over Wi-Fi only",
+                        sublabel = "Save mobile data by restricting large APK downloads to Wi-Fi networks",
+                        checked = downloadWifiOnly
+                    ) {
+                        downloadWifiOnly = it
+                        preferencesManager.isDownloadWifiOnlyEnabled = it
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+                    val isChecking = updateState is UpdateState.Checking
+                    Button(
+                        onClick = {
+                            updateManager.checkForUpdates(isManual = true)
+                        },
+                        enabled = !isChecking,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        if (isChecking) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Checking GitHub Releases...", fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Check for Updates", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    when (val state = updateState) {
+                        is UpdateState.UpToDate -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Text(
+                                    "GhostScreen is up to date (v${state.currentVersion})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        is UpdateState.Error -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                Text(
+                                    state.message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        else -> Unit
                     }
                 }
             }

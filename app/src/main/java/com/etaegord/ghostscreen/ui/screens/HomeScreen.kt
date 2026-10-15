@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import com.etaegord.ghostscreen.data.AppDatabase
 import com.etaegord.ghostscreen.data.PreferencesManager
 import com.etaegord.ghostscreen.service.GhostScreenAccessibilityService
+import com.etaegord.ghostscreen.updater.UpdateManager
+import com.etaegord.ghostscreen.updater.UpdateState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -92,6 +94,42 @@ fun HomeScreen(
     val protectedAppsCount by db.appDao().getAllProtectedApps().collectAsState(initial = emptyList())
     val auditLogsCount by db.appDao().getAllAuditLogs().collectAsState(initial = emptyList())
 
+    val updateManager = remember { UpdateManager.getInstance(context) }
+    val updateState by updateManager.updateState.collectAsState()
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var bannerDismissed by remember { mutableStateOf(false) }
+
+    // Cold-start background release check (non-blocking, non-intrusive)
+    LaunchedEffect(Unit) {
+        if (preferencesManager.isAutoCheckUpdatesEnabled && updateState is UpdateState.Idle) {
+            updateManager.checkForUpdates(isManual = false)
+        }
+    }
+
+    val currentUpdateState = updateState
+    val isManualError = currentUpdateState is UpdateState.Error && currentUpdateState.isManualCheck
+    val isManualAvailable = currentUpdateState is UpdateState.UpdateAvailable && currentUpdateState.isManualCheck
+    if (showUpdateDialog || currentUpdateState is UpdateState.Downloading || currentUpdateState is UpdateState.ReadyToInstall || isManualError || isManualAvailable) {
+        UpdateDialog(
+            updateState = currentUpdateState,
+            onDownloadClick = { info -> updateManager.startDownload(info) },
+            onInstallClick = { file -> updateManager.installApk(file) },
+            onCancelDownload = { updateManager.cancelDownload() },
+            onRemindLater = {
+                showUpdateDialog = false
+                updateManager.dismiss()
+            },
+            onSkipVersion = { tag ->
+                showUpdateDialog = false
+                updateManager.skipVersion(tag)
+            },
+            onDismiss = {
+                showUpdateDialog = false
+                updateManager.dismiss()
+            }
+        )
+    }
+
     // ──────────────────────────────────────────────────
     // Pulse animation. One choreographer-driven InfiniteTransition (not two
     // 16ms-ticking forever-coroutines) drives both pulse values, so the home
@@ -146,12 +184,22 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            BottomNavigationBar(
-                currentScreen = "home",
-                onHomeClick = {},
-                onSettingsClick = onNavigateToSettings,
-                onAboutClick = onNavigateToAbout
-            )
+            Column {
+                val availableUpdate = (updateState as? UpdateState.UpdateAvailable)?.updateInfo
+                if (availableUpdate != null && !bannerDismissed && !showUpdateDialog) {
+                    UpdateBanner(
+                        updateInfo = availableUpdate,
+                        onViewClick = { showUpdateDialog = true },
+                        onDismiss = { bannerDismissed = true }
+                    )
+                }
+                BottomNavigationBar(
+                    currentScreen = "home",
+                    onHomeClick = {},
+                    onSettingsClick = onNavigateToSettings,
+                    onAboutClick = onNavigateToAbout
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->

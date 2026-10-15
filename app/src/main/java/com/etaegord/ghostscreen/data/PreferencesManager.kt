@@ -64,6 +64,10 @@ class PreferencesManager(context: Context) {
         private const val KEY_AI_SHIELD_OTPS = "ai_shield_otps"
         private const val KEY_AI_SHIELD_BALANCES = "ai_shield_balances"
         private const val KEY_NOTIFICATION_SHIELD_ENABLED = "notification_shield_enabled"
+        private const val KEY_AUTO_CHECK_UPDATES = "auto_check_updates"
+        private const val KEY_DOWNLOAD_WIFI_ONLY = "download_wifi_only"
+        private const val KEY_SKIPPED_UPDATE_VERSION = "skipped_update_version"
+        private const val KEY_LAST_UPDATE_CHECK_TIME = "last_update_check_time"
 
         @Volatile
         private var instance: PreferencesManager? = null
@@ -266,6 +270,22 @@ class PreferencesManager(context: Context) {
     var isNotificationShieldEnabled: Boolean
         get() = prefs.getBoolean(KEY_NOTIFICATION_SHIELD_ENABLED, true)
         set(value) = edit { putBoolean(KEY_NOTIFICATION_SHIELD_ENABLED, value) }
+
+    var isAutoCheckUpdatesEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_CHECK_UPDATES, true)
+        set(value) = edit { putBoolean(KEY_AUTO_CHECK_UPDATES, value) }
+
+    var isDownloadWifiOnlyEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DOWNLOAD_WIFI_ONLY, true)
+        set(value) = edit { putBoolean(KEY_DOWNLOAD_WIFI_ONLY, value) }
+
+    var skippedUpdateVersion: String
+        get() = prefs.getString(KEY_SKIPPED_UPDATE_VERSION, "") ?: ""
+        set(value) = edit { putString(KEY_SKIPPED_UPDATE_VERSION, value) }
+
+    var lastUpdateCheckTime: Long
+        get() = prefs.getLong(KEY_LAST_UPDATE_CHECK_TIME, 0L)
+        set(value) = edit { putLong(KEY_LAST_UPDATE_CHECK_TIME, value) }
 
     fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
         plainPrefs.registerOnSharedPreferenceChangeListener(listener)
