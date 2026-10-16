@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest an idea or enhancement for GhostScreen
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping make GhostScreen better! Please explain the proposed feature, user workflow, and its privacy impact.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a specific limitation or pain point?
+      placeholder: "e.g., When reading in pitch-black environments, even 90% opacity emits too much glare..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution & UX Behavior
+      description: Describe how the feature should behave from the user's perspective.
+      placeholder: "e.g., Introduce an OLED True-Black (0x000000) pure blackout mode with zero backlight bleed..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: android_api_impact
+    attributes:
+      label: Android API & Hardware Impact
+      description: Does this require new Android permissions, WindowManager flags, or hardware sensors?
+      placeholder: "e.g., Requires ambient light sensor (Sensor.TYPE_LIGHT) on API 26+..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: privacy_impact
+    attributes:
+      label: Privacy Impact Assessment
+      description: How does this feature uphold GhostScreen's strict zero-telemetry and offline privacy guarantee?
+      placeholder: "Confirmed 100% offline; sensor readings are evaluated locally and never persisted or shared."
+    validations:
+      required: true

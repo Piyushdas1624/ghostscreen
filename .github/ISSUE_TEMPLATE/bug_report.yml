@@ -1,0 +1,89 @@
+name: Bug Report
+description: Report a bug, crash, or unexpected overlay behavior in GhostScreen
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue with GhostScreen! Please provide the details below so maintainers and AI assistants can diagnose and reproduce the problem quickly.
+  
+  - type: input
+    id: version
+    attributes:
+      label: GhostScreen Version
+      description: The app version and build code (found in Settings -> App Updates or About).
+      placeholder: "e.g., v1.0.0-b2 (Build 10000)"
+    validations:
+      required: true
+
+  - type: input
+    id: device_os
+    attributes:
+      label: Device Model & Android Version
+      description: Manufacturer, model, Android version, and custom ROM skin.
+      placeholder: "e.g., Infinix X6815D, Android 14 (XOS 14) / Xiaomi 13, Android 14 (HyperOS)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: overlay_mode
+    attributes:
+      label: Active Overlay Mode
+      description: Which screen protection mode was in use when the issue occurred?
+      options:
+        - "Box Mode (Clear reading viewport)"
+        - "Split Mode (Dual top/bottom privacy strips)"
+        - "Spotlight Mode (Circular focal viewport)"
+        - "Panic Double-Shake / Tilt Shield"
+        - "Notification Privacy Shield"
+        - "In-App Updater / Settings UI"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Clear, step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Open GhostScreen and enable Armed mode.
+        2. Switch to Box Mode and open WhatsApp.
+        3. Rotate the device from Portrait to Landscape.
+        4. Observe the mask viewport position.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: Expected vs. Actual Behavior
+      description: What did you expect to happen, and what actually occurred?
+      placeholder: "Expected viewport to center on landscape screen; instead, mask clipping occurred."
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostic_logs
+    attributes:
+      label: GhostScreen Diagnostic Bug Packet or Crash Log
+      description: |
+        Open GhostScreen -> Settings -> Diagnostics -> tap **"Copy AI Diagnostic Bug Packet"** and paste the markdown block below.
+        (Note: Diagnostic logs are strictly privacy-sanitized and contain zero PII or screen content).
+      render: markdown
+      placeholder: |
+        ```markdown
+        <!-- Paste copied AI Bug Packet or log text here -->
+        ```
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: "I have verified that no sensitive screen content or passwords are included in the logs."
+          required: true
+        - label: "I have checked existing GitHub issues to make sure this is not a duplicate."
+          required: true

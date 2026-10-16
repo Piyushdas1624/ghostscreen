@@ -124,6 +124,10 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d(TAG, "Service onServiceConnected")
+        com.etaegord.ghostscreen.util.DiagnosticLogger.logLifecycle(
+            "Accessibility service connected",
+            mapOf("armed" to preferencesManager.isArmed, "manual" to preferencesManager.isManualOverrideActive)
+        )
         // Initial state evaluation on connect (Issue #5)
         if (preferencesManager.isManualOverrideActive) {
             overlayShownForPackage = "manual"
@@ -143,6 +147,10 @@ class GhostScreenAccessibilityService : AccessibilityService() {
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         Log.d(TAG, "Configuration changed: orientation=${newConfig.orientation}")
+        com.etaegord.ghostscreen.util.DiagnosticLogger.logOverlay(
+            "Orientation configuration changed",
+            mapOf("orientation" to newConfig.orientation)
+        )
         overlay?.onConfigurationChanged()
     }
 

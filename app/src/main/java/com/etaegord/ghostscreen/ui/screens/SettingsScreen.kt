@@ -69,6 +69,7 @@ fun SettingsScreen(
     var isNotificationShieldEnabled by remember { mutableStateOf(preferencesManager.isNotificationShieldEnabled) }
     var overlayModeName         by remember { mutableStateOf(preferencesManager.overlayModeName) }
     var testLogResult           by remember { mutableStateOf<String?>(null) }
+    var bugPacketCopied         by remember { mutableStateOf(false) }
 
     val updateManager = remember { UpdateManager.getInstance(context) }
     val updateState by updateManager.updateState.collectAsState()
@@ -560,6 +561,28 @@ fun SettingsScreen(
                         Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Generate Test Diagnostic Log")
+                    }
+
+                    Button(
+                        onClick = {
+                            val success = com.etaegord.ghostscreen.util.DiagnosticLogger.copyBugPacketToClipboard(context)
+                            bugPacketCopied = success
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Default.ContentCopy, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Copy AI Diagnostic Bug Packet")
+                    }
+
+                    if (bugPacketCopied) {
+                        Text(
+                            text = "✓ Formatted markdown diagnostic report copied to clipboard. Ready to paste into GitHub issues!",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     testLogResult?.let { path ->

@@ -11,6 +11,11 @@ class GhostScreenApp : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashLogger.init(this)
+        com.etaegord.ghostscreen.util.DiagnosticLogger.log(
+            category = com.etaegord.ghostscreen.util.DiagnosticLogger.Category.DEVICE_ENV,
+            level = com.etaegord.ghostscreen.util.DiagnosticLogger.Level.INFO,
+            message = "Application process created"
+        )
         com.etaegord.ghostscreen.updater.UpdateNotificationHelper.createNotificationChannel(this)
         com.etaegord.ghostscreen.updater.UpdateManager.getInstance(this).syncPeriodicWork()
     }

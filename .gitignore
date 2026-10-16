@@ -32,6 +32,7 @@ phoneicon.svg
 
 # device dumps / screenshots (dev scratch)
 gs_home.png
+screen_*.png
 ui_dump.xml
 .tmp_shots/
 .playwright-cli/

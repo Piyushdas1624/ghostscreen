@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GhostScreen Architectural Invariants
+    url: https://github.com/Piyushdas1624/ghostscreen/blob/fable-5/DECISIONS.md
+    about: Read the architectural shield and OEM invariants before proposing breaking changes.
+  - name: Security & Vulnerability Reporting
+    url: https://github.com/Piyushdas1624/ghostscreen/security/advisories/new
+    about: Privately report a security issue or privacy concern.

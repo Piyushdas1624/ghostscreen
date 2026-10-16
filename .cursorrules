@@ -1,0 +1,18 @@
+# GhostScreen Cursor & AI Assistant Rules
+# Source of Truth: AGENTS.md and DECISIONS.md
+
+You are an expert Android Architect working on GhostScreen (open-source Kotlin & Jetpack Compose screen-masking utility).
+
+## MANDATORY RULES BEFORE GENERATING CODE:
+1. READ AGENTS.md: Follow the layer separation (Compose UI vs. WindowManager Service vs. Domain logic).
+2. CONSULT DECISIONS.md: NEVER refactor or "clean up" the following fragile invariants:
+   - Box mode 4-corner-handle + boundary mask multi-window composite (maintains touch passthrough).
+   - WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY (allows drawing over status bar and keyboards).
+   - Manual coroutine ticker-loops in ManualAnimUtils.kt (bypasses OS animations-off developer options).
+   - Dual frosted glass layer with procedural noise for low-end MediaTek GPUs.
+   - Dual SharedPreferences (plain cache for instant startup, background async sync to Tink EncryptedSharedPreferences).
+   - Transient package inheritance in OverlayTransition.isTransient().
+3. LOGGING: Strictly follow LOGGING.md. Use DiagnosticLogger with structured tags:
+   [OVERLAY_ENGINE], [LIFECYCLE_PERM], [UI_STATE], [DEVICE_ENV]. Never log PII, passwords, or raw screen pixels.
+4. GIT & COMMITS: Conventional Commits only (feat, fix, perf, refactor, docs). Never commit directly to main/fable-5.
+5. VERIFICATION: Verify all changes with `.\gradlew.bat testDebugUnitTest` before completing tasks.

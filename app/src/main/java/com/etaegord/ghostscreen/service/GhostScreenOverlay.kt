@@ -344,6 +344,10 @@ class GhostScreenOverlay(
             "SPOTLIGHT" -> Mode.SPOTLIGHT
             else -> Mode.SPLIT
         }
+        com.etaegord.ghostscreen.util.DiagnosticLogger.logOverlay(
+            "Overlay show requested",
+            mapOf("mode" to savedMode.name, "w" to screenW, "h" to screenH)
+        )
         overlayMode = savedMode
         boxEditActive = false
         cornerAlpha_ = FULL_ALPHA
@@ -563,6 +567,10 @@ class GhostScreenOverlay(
 
     fun hide() {
         if (!isShowing || isFadingOut) return
+        com.etaegord.ghostscreen.util.DiagnosticLogger.logOverlay(
+            "Overlay hide initiated",
+            mapOf("mode" to overlayMode.name)
+        )
 
         // Persist viewport so it survives across show/hide cycles.
         if (overlayMode == Mode.SPLIT && stripBotY > stripTopY && screenH > 0) {
