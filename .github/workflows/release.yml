@@ -40,7 +40,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Decode Release Keystore (if secret provided)
-        if: env.KEYSTORE_BASE64 != ''
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -49,7 +49,7 @@ jobs:
 
       - name: Build Release APK
         env:
-          RELEASE_STORE_FILE: ${{ env.KEYSTORE_BASE64 != '' && '~/.android/release.keystore' || '' }}
+          RELEASE_STORE_FILE: ${{ secrets.KEYSTORE_BASE64 != '' && '/home/runner/.android/release.keystore' || '' }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
@@ -67,6 +67,7 @@ jobs:
           done
 
       - name: Archive R8 Mapping File
+        if: hashFiles('app/build/outputs/mapping/release/mapping.txt') != ''
         uses: actions/upload-artifact@v4
         with:
           name: r8-mapping
@@ -76,7 +77,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "GhostScreen Release ${{ github.ref_name }}"
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
+          name: "GhostScreen Release ${{ inputs.tag_name || github.ref_name }}"
           draft: false
           prerelease: false
           generate_release_notes: true
