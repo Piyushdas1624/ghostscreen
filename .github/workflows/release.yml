@@ -67,7 +67,6 @@ jobs:
           done
 
       - name: Archive R8 Mapping File
-        if: hashFiles('app/build/outputs/mapping/release/mapping.txt') != ''
         uses: actions/upload-artifact@v4
         with:
           name: r8-mapping
@@ -77,8 +76,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag_name || github.ref_name }}
-          name: "GhostScreen Release ${{ inputs.tag_name || github.ref_name }}"
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          name: "GhostScreen Release ${{ github.event.inputs.tag_name || github.ref_name }}"
           draft: false
           prerelease: false
           generate_release_notes: true
