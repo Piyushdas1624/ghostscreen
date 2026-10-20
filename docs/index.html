@@ -1,0 +1,3549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GhostScreen (Ghost Screen) — Open-Source Android Privacy Screen & Overlay App</title>
+  <meta name="description" content="GhostScreen (Ghost Screen) is an open-source, 100% offline Android privacy screen and screen-masking overlay app built with Kotlin & Jetpack Compose to prevent shoulder-surfing. Zero network telemetry.">
+  <meta name="keywords" content="GhostScreen, Ghost Screen, Android privacy screen, screen mask, privacy overlay, shoulder surfing, Kotlin, Jetpack Compose, open source privacy">
+  <meta name="author" content="Piyush Das">
+  <link rel="canonical" href="https://piyushdas1624.github.io/ghostscreen/">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://piyushdas1624.github.io/ghostscreen/">
+  <meta property="og:title" content="GhostScreen (Ghost Screen) — Open-Source Android Privacy Screen & Overlay App">
+  <meta property="og:description" content="100% offline Android privacy screen and screen-masking overlay utility built with Kotlin & Jetpack Compose to stop shoulder-surfing.">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://piyushdas1624.github.io/ghostscreen/">
+  <meta property="twitter:title" content="GhostScreen (Ghost Screen) — Android Privacy Screen">
+  <meta property="twitter:description" content="Stop shoulder-surfing with an open-source, hardware-accelerated privacy overlay for Android. Zero telemetry.">
+
+  <!-- Structured Data: JSON-LD SoftwareApplication Schema for Google AI Mode & Search -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GhostScreen",
+    "alternateName": "Ghost Screen",
+    "operatingSystem": "Android",
+    "applicationCategory": "SecurityApplication",
+    "description": "GhostScreen (Ghost Screen) is an open-source Android privacy screen and screen-masking overlay application that prevents shoulder-surfing with 100% offline processing and zero telemetry.",
+    "url": "https://github.com/Piyushdas1624/ghostscreen",
+    "downloadUrl": "https://github.com/Piyushdas1624/ghostscreen/releases",
+    "softwareVersion": "1.0.0-b3",
+    "author": {
+      "@type": "Person",
+      "name": "Piyush Das",
+      "url": "https://github.com/Piyushdas1624"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --md-primary: #8b5cf6;
+      --md-primary-container: #4c1d95;
+      --md-on-primary-container: #ede9fe;
+      --md-surface: #0f1117;
+      --md-surface-card: #181b24;
+      --md-surface-low: #13151e;
+      --md-surface-high: #222634;
+      --md-text: #f3f4f6;
+      --md-text-muted: #9ca3af;
+      --md-accent: #a78bfa;
+      --md-accent-glow: rgba(139, 92, 246, 0.35);
+      --md-danger: #ef4444;
+      --md-success: #10b981;
+      --md-warning: #f59e0b;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--md-surface);
+      color: var(--md-text);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px var(--md-accent-glow);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #fff, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-header {
+      background: var(--md-surface-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-header:hover {
+      background: var(--md-surface-high);
+      border-color: var(--md-accent);
+      color: #fff;
+    }
+
+    /* Main Container Grid */
+    main {
+      flex: 1;
+      max-width: 1520px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      grid-template-columns: 430px 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    @media (max-width: 1160px) {
+      main {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Phone Mockup Frame */
+    .phone-column {
+      position: sticky;
+      top: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      perspective: 1200px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .phone-device {
+      width: 360px;
+      height: 740px;
+      background: #000;
+      border-radius: 46px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 10px #1e2029, 0 0 0 12px #2d3142;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background: #080808;
+      border-radius: 50%;
+      z-index: 60;
+      box-shadow: inset 0 0 2px #333;
+    }
+
+    .phone-status-bar {
+      height: 34px;
+      padding: 8px 22px 0 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      z-index: 50;
+      background: transparent;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Android 12+ Camera Privacy Green Indicator Dot */
+    .camera-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981, 0 0 10px rgba(16, 185, 129, 0.6);
+      display: none;
+      animation: cameraDotPulse 1.8s infinite ease-in-out;
+      cursor: pointer;
+    }
+
+    @keyframes cameraDotPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.8); opacity: 0.45; }
+    }
+
+    .phone-screen {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #090a0f;
+    }
+
+    /* Target App Mockups inside Phone */
+    .app-screen {
+      position: absolute;
+      inset: 0;
+      padding: 12px 18px 20px 18px;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .app-screen::-webkit-scrollbar {
+      display: none;
+    }
+
+    .app-screen.active {
+      display: flex;
+    }
+
+    /* APP 1: Banking Dashboard */
+    .bank-card {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .bank-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #c7d2fe;
+    }
+
+    .bank-balance {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin: 12px 0 4px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .bank-account {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #a5b4fc;
+      letter-spacing: 0.1em;
+    }
+
+    .txn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .txn-item {
+      background: #141722;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .txn-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .txn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .txn-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .txn-date {
+      font-size: 0.7rem;
+      color: var(--md-text-muted);
+    }
+
+    .txn-amount {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* APP 2: Secret Chat */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
+    }
+
+    .chat-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #e11d48;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .chat-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .chat-status {
+      font-size: 0.7rem;
+      color: #10b981;
+    }
+
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .bubble-them {
+      align-self: flex-start;
+      background: #1f2433;
+      border-bottom-left-radius: 4px;
+      color: #e2e8f0;
+    }
+
+    .bubble-me {
+      align-self: flex-end;
+      background: #7c3aed;
+      border-bottom-right-radius: 4px;
+      color: #fff;
+    }
+
+    /* APP 3: 2FA Keys */
+    .auth-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .auth-item {
+      background: #151824;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .auth-issuer {
+      font-size: 0.75rem;
+      color: var(--md-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-account {
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .auth-code {
+      font-family: monospace;
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: #38bdf8;
+    }
+
+    /* APP 4: GhostScreen Home */
+    .gs-app-card {
+      background: var(--md-surface-card);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .gs-master-switch {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* APP 5: Secure ATM / PIN Pad (For Decoy Scrambler) */
+    .pinpad-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 10px;
+    }
+
+    .pin-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .pin-subtitle {
+      font-size: 0.72rem;
+      color: var(--md-text-muted);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--md-accent);
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--md-accent);
+      box-shadow: 0 0 10px var(--md-accent-glow);
+    }
+
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 100%;
+      max-width: 270px;
+      position: relative;
+    }
+
+    .keypad-btn {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #181c28;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 1.35rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      touch-action: none;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .keypad-btn:active {
+      transform: scale(0.92);
+      background: #252b3d;
+    }
+
+    .keypad-btn-sub {
+      font-size: 0.6rem;
+      font-weight: 500;
+      color: #94a3b8;
+      letter-spacing: 0.1em;
+      margin-top: -2px;
+    }
+
+    /* Decoy Touch Scrambler Ripple Wavefronts */
+    .decoy-ripple-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 45;
+      overflow: hidden;
+    }
+
+    .scramble-ripple {
+      position: absolute;
+      border-radius: 50%;
+      border: 2.5px solid var(--md-accent);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: rippleBurst 0.26s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    }
+
+    .scramble-ripple.decoy {
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .scramble-ripple.real-user {
+      border-color: #a78bfa;
+      box-shadow: 0 0 12px var(--md-accent-glow);
+    }
+
+    .scramble-ripple.real-user::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 7px;
+      height: 7px;
+      background: #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 6px #fff;
+    }
+
+    @keyframes rippleBurst {
+      0% {
+        width: 10px;
+        height: 10px;
+        opacity: 0.95;
+      }
+      100% {
+        width: 76px;
+        height: 76px;
+        opacity: 0;
+      }
+    }
+
+    /* APP 6: Simulated Android Recents Screen */
+    .recents-screen {
+      position: absolute;
+      inset: 0;
+      background: #0b0d13;
+      padding: 30px 16px 20px 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 52;
+    }
+
+    .recents-header {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .recents-card-frame {
+      width: 260px;
+      height: 480px;
+      background: #141722;
+      border-radius: 28px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .recents-card-appbar {
+      height: 38px;
+      background: #1c202e;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .recents-card-body {
+      flex: 1;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .recents-camouflage-veil {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .recents-camouflage-veil.leaked {
+      display: none !important;
+    }
+
+    /* Peeker Sentry Top 70% Privacy Veil */
+    .peeker-veil {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70%;
+      background: rgba(9, 10, 15, 0.97);
+      border-bottom: 3px solid #ef4444;
+      box-shadow: 0 12px 36px rgba(239, 68, 68, 0.4);
+      z-index: 55;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 18px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .peeker-veil.active {
+      display: flex;
+      animation: dropVeilAnim 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes dropVeilAnim {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Peeker Sentry Camera Radar HUD */
+    .peeker-hud {
+      position: absolute;
+      top: 40px;
+      right: 14px;
+      width: 140px;
+      background: rgba(15, 17, 24, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 8px;
+      z-index: 58;
+      display: none;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+    }
+
+    .peeker-hud-title {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .peeker-radar-canvas {
+      width: 100%;
+      height: 64px;
+      background: #07080c;
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .radar-face-primary {
+      position: absolute;
+      left: 36%;
+      top: 24%;
+      width: 32px;
+      height: 38px;
+      border: 1.5px solid #10b981;
+      border-radius: 4px;
+      box-shadow: 0 0 6px #10b981;
+    }
+
+    .radar-face-peeker {
+      position: absolute;
+      right: 10%;
+      top: 10%;
+      width: 22px;
+      height: 26px;
+      border: 1.5px solid #ef4444;
+      border-radius: 4px;
+      box-shadow: 0 0 8px #ef4444;
+      animation: alertPulse 0.8s infinite alternate;
+    }
+
+    @keyframes alertPulse {
+      0% { opacity: 0.4; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1.05); }
+    }
+
+    /* Anti-OCR Micro-Steganographic Moiré Grid Layer */
+    .moire-grid-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 34;
+      display: none;
+      opacity: 0.85;
+      mix-blend-mode: overlay;
+    }
+
+    .moire-grid-layer.active {
+      display: block;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.16) 0px,
+        rgba(255, 255, 255, 0.16) 2px,
+        transparent 2px,
+        transparent 5px
+      );
+      background-size: 6px 6px;
+    }
+
+    .moire-grid-layer.drifting {
+      animation: moireDrift 0.016s infinite linear;
+    }
+
+    @keyframes moireDrift {
+      0% { background-position: 0 0; }
+      100% { background-position: 6px 6px; }
+    }
+
+    /* ========================================================
+       LIVE GHOSTSCREEN OVERLAY ENGINE
+       ======================================================== */
+    .overlay-container {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+      overflow: hidden;
+      transition: opacity 0.25s ease;
+    }
+
+    /* 4 Mask Edge Windows for Box Mode */
+    .mask-edge {
+      position: absolute;
+      background: #000;
+      pointer-events: auto;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .mask-top    { top: 0; left: 0; right: 0; }
+    .mask-bottom { bottom: 0; left: 0; right: 0; }
+    .mask-left   { left: 0; }
+    .mask-right  { right: 0; }
+
+    /* The Center Viewport (Hollow touch passthrough) */
+    .viewport-box {
+      position: absolute;
+      pointer-events: none;
+      border: 2px solid var(--md-accent);
+      border-radius: 8px;
+      box-shadow: 0 0 18px rgba(139, 92, 246, 0.4), inset 0 0 10px rgba(139, 92, 246, 0.2);
+      transition: border-color 0.2s ease;
+    }
+
+    /* Corner Drag Handles */
+    .corner-handle {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--md-accent);
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%);
+      z-index: 35;
+      transition: transform 0.1s ease, background-color 0.2s;
+    }
+
+    .corner-handle:active {
+      cursor: grabbing;
+      transform: translate(-50%, -50%) scale(1.2);
+      background: #fff;
+    }
+
+    .corner-handle::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: var(--md-surface);
+      border-radius: 50%;
+    }
+
+    /* Droplet Dynamic Badge */
+    .drop-badge {
+      position: absolute;
+      bottom: 24px;
+      right: 20px;
+      background: rgba(24, 27, 36, 0.95);
+      border: 1.5px solid var(--md-accent);
+      border-radius: 999px;
+      padding: 6px 14px 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      z-index: 38;
+      cursor: ns-resize;
+      pointer-events: auto;
+      touch-action: none;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .drop-badge:hover {
+      transform: scale(1.06);
+    }
+
+    .drop-icon {
+      width: 14px;
+      height: 14px;
+      fill: var(--md-accent);
+    }
+
+    .drop-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Alternate Mode 1: Split Strip Mode */
+    .split-strip {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: #000;
+      pointer-events: auto;
+      touch-action: none;
+      display: none;
+      z-index: 25;
+    }
+
+    .split-top { top: 0; }
+    .split-bottom { bottom: 0; }
+
+    .split-bar {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 76px;
+      height: 10px;
+      background: var(--md-accent);
+      border-radius: 5px;
+      cursor: ns-resize;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      pointer-events: auto;
+      transition: background-color 0.2s, transform 0.15s;
+    }
+
+    .split-bar:hover, .split-bar:active {
+      transform: translateX(-50%) scale(1.12);
+      background: #fff;
+    }
+
+    .split-bar::after {
+      content: '';
+      width: 26px;
+      height: 2px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 1px;
+    }
+
+    /* Alternate Mode 2: Spotlight / Circle Torch */
+    .spotlight-mask {
+      position: absolute;
+      inset: 0;
+      pointer-events: auto;
+      cursor: crosshair;
+      touch-action: none;
+      display: none;
+      z-index: 28;
+    }
+
+    /* Alternate Mode 3: Dynamic Pill / Island Peek */
+    .pill-viewport {
+      position: absolute;
+      border-radius: 999px;
+      border: 2px solid var(--md-accent);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+      pointer-events: auto;
+      cursor: grab;
+      touch-action: none;
+      display: none;
+      z-index: 30;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .pill-viewport:active {
+      cursor: grabbing;
+    }
+
+    .pill-handle {
+      width: 34px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+      position: absolute;
+      top: 6px;
+    }
+
+    /* AI Field Highlight Shield Mini-Overlay */
+    .ai-field-shield {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.95);
+      border: 1px dashed var(--md-accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--md-accent);
+      z-index: 32;
+      pointer-events: auto;
+      cursor: pointer;
+      animation: pulseField 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseField {
+      0%, 100% { border-color: var(--md-accent); }
+      50% { border-color: rgba(255, 255, 255, 0.4); }
+    }
+
+    /* Gesture Home Navigation Bar */
+    .phone-nav-bar {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      cursor: pointer;
+    }
+
+    .home-pill {
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+      transition: background-color 0.2s, transform 0.15s;
+    }
+
+    .home-pill:hover, .home-pill:active {
+      background: #fff;
+      transform: scaleY(1.5);
+    }
+
+    /* Right Column: Interactive Studio & Idea Showcase */
+    .studio-column {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-subtitle {
+      font-size: 0.88rem;
+      color: var(--md-text-muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* Card Panels */
+    .panel-card {
+      background: var(--md-surface-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Sub-Feature Cards for Section 2 */
+    .feature-lab-card {
+      background: var(--md-surface-low);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: border-color 0.2s ease;
+    }
+
+    .feature-lab-card:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .lab-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .lab-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-camera { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+    .badge-scramble { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+    .badge-optics { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
+    .badge-system { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+
+    /* Edge Case Warning Box */
+    .edge-case-box {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: #fef3c7;
+    }
+
+    .edge-case-header {
+      font-weight: 700;
+      color: #f59e0b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Real-Time Camera OCR Viewfinder Box */
+    .camera-ocr-box {
+      background: #08090d;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .viewfinder-reticle {
+      border: 1px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      padding: 14px;
+      background: rgba(20, 24, 36, 0.5);
+      position: relative;
+    }
+
+    .ocr-meter-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: #222634;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .ocr-meter-fill {
+      height: 100%;
+      width: 98%;
+      background: #10b981;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    /* Controls Grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--md-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Mode Pill Buttons */
+    .mode-selector {
+      display: flex;
+      background: var(--md-surface-low);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      flex: 1;
+      min-width: 90px;
+      background: transparent;
+      border: none;
+      color: var(--md-text-muted);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .mode-btn.active {
+      background: var(--md-primary);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--md-accent-glow);
+    }
+
+    /* Slider styling */
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--md-surface-high);
+      outline: none;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--md-accent);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      border: 2px solid #fff;
+    }
+
+    .slider-val {
+      min-width: 44px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--md-accent);
+    }
+
+    /* Preset & Sensor Simulation Triggers */
+    .action-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      background: var(--md-surface-low);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .chip-btn:hover {
+      background: var(--md-surface-high);
+      border-color: var(--md-accent);
+    }
+
+    .chip-btn.active {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      border-color: var(--md-primary);
+    }
+
+    /* Ideas & Concepts Feature Cards */
+    .ideas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 16px;
+    }
+
+    .idea-card {
+      background: var(--md-surface-low);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .idea-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .idea-badge {
+      align-self: flex-start;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-innovative { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+    .badge-sensor { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+    .badge-ai { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+    .badge-ui { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
+
+    .idea-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .idea-desc {
+      font-size: 0.85rem;
+      color: var(--md-text-muted);
+      line-height: 1.5;
+    }
+
+    .idea-meta {
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    .idea-try-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--md-text);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .idea-try-btn:hover {
+      background: var(--md-primary);
+      color: #fff;
+    }
+
+    /* Notification Toast */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1b4b;
+      border: 1px solid var(--md-accent);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast-msg.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Texture Patterns */
+    .texture-louver {
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.98),
+        rgba(0, 0, 0, 0.98) 3px,
+        rgba(20, 20, 30, 0.95) 3px,
+        rgba(20, 20, 30, 0.95) 6px
+      ) !important;
+    }
+
+    .texture-matrix {
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 10%, transparent 11%), #000 !important;
+      background-size: 8px 8px !important;
+    }
+
+    .texture-noise {
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px), #0b0c10 !important;
+      background-size: 4px 4px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-2.38 1.04-4.52 2.7-6l2.12 2.12C7.68 9.17 7 10.49 7 12c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.51-.68-2.83-1.82-3.88L17.3 6C18.96 7.48 20 9.62 20 12c0 4.41-3.59 8-8 8z"/>
+        </svg>
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="brand-title">GhostScreen</span>
+          <span class="brand-badge">Innovation Lab</span>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--md-text-muted);">Interactive Architecture & Novel Privacy Prototype</div>
+      </div>
+    </div>
+    <div class="header-links">
+      <button class="btn-header" onclick="triggerPeekerSimulation()">
+        <span>👁️ Simulate Peeker</span>
+      </button>
+      <button class="btn-header" onclick="triggerRecentsTransition()">
+        <span>📲 Test Recents Shield</span>
+      </button>
+      <button class="btn-header" onclick="triggerPanicCloak()">
+        <span>🛡️ Panic Cloak</span>
+      </button>
+      <button class="btn-header" onclick="togglePhoneTilt()">
+        <span>📐 Test Tilt Sensor</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main>
+    <!-- Left Column: Interactive Phone Mockup -->
+    <div class="phone-column">
+      <div class="phone-device" id="phoneDevice">
+        <!-- Punch-hole front camera -->
+        <div class="phone-notch"></div>
+
+        <!-- Android Status Bar -->
+        <div class="phone-status-bar">
+          <div class="status-left">
+            <span id="phoneClock">21:52</span>
+            <!-- Android 12+ Green Privacy Indicator Dot -->
+            <div class="camera-dot" id="statusCameraDot" title="Android 12+ Privacy Indicator: Front Camera Active (CameraX ML Kit Gaze Guard)" onclick="showToast('Android 12+ Green Dot: CameraX sensor actively polling at 0.5 FPS', '🟢')"></div>
+          </div>
+          <div class="status-icons">
+            <span>5G</span>
+            <span>98%</span>
+          </div>
+        </div>
+
+        <!-- Phone Screen with Simulated Target Apps -->
+        <div class="phone-screen" id="phoneScreen">
+
+          <!-- APP 1: Banking Dashboard -->
+          <div class="app-screen active" id="appBank">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <span style="font-weight: 700; font-size: 0.95rem;">VaultBank Mobile</span>
+              <span style="font-size: 0.75rem; color: #a5b4fc;">● Protected</span>
+            </div>
+            <div class="bank-card" id="bankBalanceCard">
+              <div class="bank-header">
+                <span>TOTAL CHECKING</span>
+                <span>VISA PLATINUM</span>
+              </div>
+              <div class="bank-balance" id="bankBalanceText">$28,490.50</div>
+              <div class="bank-account" id="bankCardNum">•••• •••• •••• 9241</div>
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 8px;">RECENT TRANSACTIONS</div>
+            <div class="txn-list">
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">💎</div>
+                  <div>
+                    <div class="txn-name">Emerald Security Ltd</div>
+                    <div class="txn-date">Today, 18:30</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #ef4444;">-$2,450.00</div>
+              </div>
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">💼</div>
+                  <div>
+                    <div class="txn-name">Client Wire Transfer</div>
+                    <div class="txn-date">Yesterday, 14:15</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #10b981;">+$9,200.00</div>
+              </div>
+              <div class="txn-item">
+                <div class="txn-info">
+                  <div class="txn-icon">☕</div>
+                  <div>
+                    <div class="txn-name">Artisan Roast Co</div>
+                    <div class="txn-date">24 Sep, 09:12</div>
+                  </div>
+                </div>
+                <div class="txn-amount" style="color: #ef4444;">-$6.40</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- APP 2: Secret Chat -->
+          <div class="app-screen" id="appChat">
+            <div class="chat-header">
+              <div class="chat-avatar">S</div>
+              <div>
+                <div class="chat-name">Sarah Vance (Encrypted)</div>
+                <div class="chat-status">● End-to-end Signal protocol</div>
+              </div>
+            </div>
+            <div class="chat-messages">
+              <div class="chat-bubble bubble-them">
+                Hey, did you review the Q4 financial audit files? Don't leave them open in public transit.
+              </div>
+              <div class="chat-bubble bubble-me">
+                Yeah, keeping GhostScreen active right now.
+              </div>
+              <div class="chat-bubble bubble-them" id="chatOtpBubble">
+                Your emergency one-time auth code for the cold vault is: <strong style="color: #38bdf8;">894-112</strong>
+              </div>
+              <div class="chat-bubble bubble-me">
+                Received. Destroying record now.
+              </div>
+            </div>
+          </div>
+
+          <!-- APP 3: 2FA Authenticator -->
+          <div class="app-screen" id="appAuth">
+            <div class="auth-title">Security Keys (2FA)</div>
+            <div class="auth-item" id="authItem1">
+              <div class="auth-issuer">Binance Exchange</div>
+              <div class="auth-account">user@etaegord.internal</div>
+              <div class="auth-code" id="authCode1">739 204</div>
+            </div>
+            <div class="auth-item" id="authItem2">
+              <div class="auth-issuer">GitHub Enterprise</div>
+              <div class="auth-account">piyushdas1624</div>
+              <div class="auth-code">582 911</div>
+            </div>
+            <div class="auth-item">
+              <div class="auth-issuer">ProtonMail Secure</div>
+              <div class="auth-account">vault@proton.me</div>
+              <div class="auth-code">410 827</div>
+            </div>
+          </div>
+
+          <!-- APP 4: GhostScreen Home Dashboard -->
+          <div class="app-screen" id="appGhost">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div>
+                <div style="font-weight: 700; font-size: 1.1rem;">GhostScreen</div>
+                <div style="font-size: 0.72rem; color: #a78bfa;">Status: ARMED & RUNNING</div>
+              </div>
+              <div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></div>
+            </div>
+
+            <!-- Instant Mask Quick Action Card -->
+            <div class="gs-app-card" style="background: linear-gradient(135deg, #2e1065, #4c1d95); border-color: #7c3aed; cursor: pointer;" onclick="toggleOverlay()">
+              <div class="gs-master-switch">
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem; color: #fff;">Instant Manual Mask</div>
+                  <div style="font-size: 0.72rem; color: #ddd6fe;" id="mockupCardSub">Tap to Toggle Overlay Now</div>
+                </div>
+                <div style="font-size: 1.2rem;">👁️</div>
+              </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+              <div class="gs-app-card" style="padding: 12px; margin: 0;">
+                <div style="font-size: 0.7rem; color: #94a3b8;">Protected Apps</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">6 Active</div>
+              </div>
+              <div class="gs-app-card" style="padding: 12px; margin: 0;">
+                <div style="font-size: 0.7rem; color: #94a3b8;">Audit Events</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">42 Logged</div>
+              </div>
+            </div>
+
+            <!-- In-App Sliders Preview -->
+            <div class="gs-app-card">
+              <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 8px;">Overlay Transparency</div>
+              <input type="range" min="10" max="100" value="85" style="width: 100%;" oninput="updateOpacity(this.value)">
+            </div>
+          </div>
+
+          <!-- APP 5: Secure ATM / PIN Pad (For Decoy Scrambler) -->
+          <div class="app-screen" id="appPinPad">
+            <div class="pinpad-container">
+              <div class="pin-title">VaultBank Security PIN</div>
+              <div class="pin-subtitle">Tap keys to test synchronized multi-ripple decoys</div>
+
+              <div class="pin-dots">
+                <div class="pin-dot" id="dot0"></div>
+                <div class="pin-dot" id="dot1"></div>
+                <div class="pin-dot" id="dot2"></div>
+                <div class="pin-dot" id="dot3"></div>
+              </div>
+
+              <!-- 3x4 Touch Keypad Grid -->
+              <div class="keypad-grid" id="phoneKeypadGrid">
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('1', event, this)">1<span class="keypad-btn-sub"></span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('2', event, this)">2<span class="keypad-btn-sub">ABC</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('3', event, this)">3<span class="keypad-btn-sub">DEF</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('4', event, this)">4<span class="keypad-btn-sub">GHI</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('5', event, this)">5<span class="keypad-btn-sub">JKL</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('6', event, this)">6<span class="keypad-btn-sub">MNO</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('7', event, this)">7<span class="keypad-btn-sub">PQRS</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('8', event, this)">8<span class="keypad-btn-sub">TUV</span></button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('9', event, this)">9<span class="keypad-btn-sub">WXYZ</span></button>
+                <button class="keypad-btn" style="font-size: 1rem; color: #ef4444;" onpointerdown="handleKeypadTap('C', event, this)">⌫</button>
+                <button class="keypad-btn" onpointerdown="handleKeypadTap('0', event, this)">0<span class="keypad-btn-sub">+</span></button>
+                <button class="keypad-btn" style="font-size: 1rem; color: #10b981;" onpointerdown="handleKeypadTap('OK', event, this)">✓</button>
+              </div>
+
+              <!-- Scrambler Multi-Ripple Container -->
+              <div class="decoy-ripple-layer" id="phoneRippleLayer"></div>
+            </div>
+          </div>
+
+          <!-- APP 6: Simulated Android Recents Overview -->
+          <div class="recents-screen" id="appRecents">
+            <div class="recents-header">
+              <span>Overview · Android 13 Recents</span>
+            </div>
+            
+            <div class="recents-card-frame" onclick="restoreFromRecents()">
+              <div class="recents-card-appbar">
+                <span style="font-size: 1rem;">🏦</span>
+                <span>VaultBank Mobile</span>
+              </div>
+              <div class="recents-card-body">
+                <!-- Thumbnail Preview (Exposed if Recents Shield is disabled) -->
+                <div style="font-size: 0.7rem; color: #a5b4fc; margin-bottom: 4px;">CHECKING BALANCE</div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 6px;">$28,490.50</div>
+                <div style="font-size: 0.65rem; color: #94a3b8; font-family: monospace;">•••• 9241 · VISA</div>
+                <div style="margin-top: 18px; font-size: 0.65rem; color: #64748b;">Recent Wire: +$9,200.00</div>
+
+                <!-- GhostScreen Camouflage Veil (Engaged if Recents Shield is active) -->
+                <div class="recents-camouflage-veil" id="recentsCamouflageVeil">
+                  <div style="font-size: 2.2rem;">🛡️</div>
+                  <div style="font-size: 0.88rem; font-weight: 700; color: #fff;">GhostScreen Secured</div>
+                  <div style="font-size: 0.7rem; color: #a78bfa; line-height: 1.4;">
+                    Instant Camouflage Veil Active<br>System snapshot redacted
+                  </div>
+                  <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 6px; padding: 4px 8px; background: rgba(255,255,255,0.06); border-radius: 6px;">
+                    Tap card to resume app
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; font-size: 0.72rem; color: #94a3b8; text-align: center;">
+              Tap card or click button below to resume application.
+            </div>
+          </div>
+
+          <!-- ========================================================
+               PEEKER SENTRY HUD & PRIVACY VEIL (Gaze Guard)
+               ======================================================== -->
+          <!-- Peeker Mini Radar HUD -->
+          <div class="peeker-hud" id="peekerHud">
+            <div class="peeker-hud-title">
+              <span>CameraX Sentry</span>
+              <span style="color: #10b981;">0.5 FPS</span>
+            </div>
+            <div class="peeker-radar-canvas">
+              <div class="radar-face-primary" title="Primary User Face Detected"></div>
+              <div class="radar-face-peeker" id="hudPeekerFace" style="display: none;" title="Peeker Face Detected over Shoulder!"></div>
+            </div>
+            <div style="font-size: 0.62rem; color: #94a3b8; margin-top: 4px;" id="hudStatusText">
+              Scanning (1 face centered)
+            </div>
+          </div>
+
+          <!-- Peeker Top 70% Privacy Veil -->
+          <div class="peeker-veil" id="peekerVeil">
+            <div style="font-size: 2.4rem; margin-bottom: 8px;">⚠️</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #ef4444; letter-spacing: -0.01em; margin-bottom: 6px;">
+              GAZE GUARD PRIVACY VEIL
+            </div>
+            <div style="font-size: 0.78rem; color: #fecaca; line-height: 1.5; margin-bottom: 18px; max-width: 250px;">
+              A secondary face was detected viewing your screen over your shoulder. Top 70% masked.
+            </div>
+            <button class="chip-btn" style="background: rgba(239, 68, 68, 0.25); border-color: #ef4444; color: #fff; font-weight: 700; padding: 8px 18px;" onclick="dismissPeekerVeil()">
+              Dismiss & Restore
+            </button>
+          </div>
+
+          <!-- ========================================================
+               ANTI-OCR MICRO-STEGANOGRAPHIC MOIRÉ LAYER
+               ======================================================== -->
+          <div class="moire-grid-layer" id="moireGridLayer"></div>
+
+          <!-- ========================================================
+               LIVE OVERLAY LAYER (Simulating Invariants I1 - I6)
+               ======================================================== -->
+          <div class="overlay-container" id="ghostOverlay">
+            
+            <!-- Box Mode Mask Windows (Top, Bottom, Left, Right) -->
+            <div class="mask-edge mask-top" id="maskTop"></div>
+            <div class="mask-edge mask-bottom" id="maskBottom"></div>
+            <div class="mask-edge mask-left" id="maskLeft"></div>
+            <div class="mask-edge mask-right" id="maskRight"></div>
+
+            <!-- Center Viewport (Empty touch passthrough) -->
+            <div class="viewport-box" id="viewportBox"></div>
+
+            <!-- 4 Drag Handles -->
+            <div class="corner-handle" id="handleTL"></div>
+            <div class="corner-handle" id="handleTR"></div>
+            <div class="corner-handle" id="handleBL"></div>
+            <div class="corner-handle" id="handleBR"></div>
+
+            <!-- Split Strip Mode Windows -->
+            <div class="split-strip split-top" id="splitTop">
+              <div class="split-bar" id="splitTopBar" style="bottom: 8px;" title="Drag down to adjust top reading barrier"></div>
+            </div>
+            <div class="split-strip split-bottom" id="splitBottom">
+              <div class="split-bar" id="splitBottomBar" style="top: 8px;" title="Drag up to adjust bottom reading barrier"></div>
+            </div>
+
+            <!-- Circular Spotlight Torch Mode -->
+            <div class="spotlight-mask" id="spotlightMask" title="Move pointer or drag across screen to aim spotlight torch"></div>
+
+            <!-- Pill Peek Mode -->
+            <div class="pill-viewport" id="pillViewport" title="Drag capsule up or down to peek through text lines">
+              <div class="pill-handle"></div>
+            </div>
+
+            <!-- Droplet Badge (Dynamic M3 Expressive) -->
+            <div class="drop-badge" id="dropBadge" title="Tap to step opacity, or drag vertically to adjust">
+              <svg class="drop-icon" viewBox="0 0 24 24">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+              </svg>
+              <span class="drop-label" id="dropLabel">85%</span>
+            </div>
+
+            <!-- Dynamic AI Field Shields Container -->
+            <div id="aiShieldsContainer"></div>
+          </div>
+
+        </div>
+
+        <!-- Android 3-Button / Gesture Bar -->
+        <div class="phone-nav-bar" onclick="triggerRecentsTransition()" title="Swipe up or tap to trigger Android Recents / App Switcher">
+          <div class="home-pill"></div>
+        </div>
+      </div>
+
+      <!-- App Switcher Toolbar under Phone -->
+      <div style="display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center;">
+        <button class="chip-btn active" id="chipBank" onclick="switchApp('appBank', this)">🏦 Banking</button>
+        <button class="chip-btn" id="chipChat" onclick="switchApp('appChat', this)">💬 Chat</button>
+        <button class="chip-btn" id="chipAuth" onclick="switchApp('appAuth', this)">🔑 2FA Keys</button>
+        <button class="chip-btn" id="chipPinPad" onclick="switchApp('appPinPad', this)">🔢 PIN Pad</button>
+        <button class="chip-btn" id="chipGhost" onclick="switchApp('appGhost', this)">👻 GS App</button>
+        <button class="chip-btn" id="chipRecents" onclick="switchApp('appRecents', this)">📲 Recents</button>
+      </div>
+    </div>
+
+    <!-- Right Column: Interactive Studio, Feature Lab & Technical Insights -->
+    <div class="studio-column">
+      
+      <!-- ========================================================
+           SECTION 1: OVERLAY CONTROLLER (Core Invariant Engine)
+           ======================================================== -->
+      <div class="panel-card">
+        <div class="section-title">
+          <span>🎛️ Privacy Overlay Controller</span>
+        </div>
+        <div class="section-subtitle">
+          Test GhostScreen's real-time overlay geometry, responsive canvas shaders, and Material 3 Expressive tokens directly on the simulated device.
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Viewport Privacy Geometry Mode</label>
+          <div class="mode-selector">
+            <button class="mode-btn active" id="btnModeBox" onclick="setMode('box')">
+              <span>🔲 Box Mode</span>
+            </button>
+            <button class="mode-btn" id="btnModeSplit" onclick="setMode('split')">
+              <span>↕️ Split Slit</span>
+            </button>
+            <button class="mode-btn" id="btnModeSpotlight" onclick="setMode('spotlight')">
+              <span>🔦 Spotlight Torch</span>
+            </button>
+            <button class="mode-btn" id="btnModePill" onclick="setMode('pill')">
+              <span>💊 Island Pill</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="controls-grid" style="margin-top: 20px;">
+          <div class="control-group">
+            <label class="control-label">Mask Density / Opacity</label>
+            <div class="slider-container">
+              <input type="range" id="opacitySlider" min="10" max="100" value="85" oninput="updateOpacity(this.value)">
+              <span class="slider-val" id="opacityVal">85%</span>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Privacy Texture & Shader</label>
+            <div class="action-chips">
+              <button class="chip-btn active" onclick="setTexture('solid', this)">OLED Black</button>
+              <button class="chip-btn" onclick="setTexture('louver', this)">3M Louver</button>
+              <button class="chip-btn" onclick="setTexture('matrix', this)">Cyber Matrix</button>
+              <button class="chip-btn" onclick="setTexture('noise', this)">Dither Noise</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-grid" style="margin-top: 16px;">
+          <div class="control-group">
+            <label class="control-label">Material 3 Expressive Accent Palette</label>
+            <div class="action-chips">
+              <button class="chip-btn active" onclick="setAccentTheme('#8b5cf6', '#a78bfa', this)">Violet Twilight</button>
+              <button class="chip-btn" onclick="setAccentTheme('#06b6d4', '#22d3ee', this)">Electric Cyan</button>
+              <button class="chip-btn" onclick="setAccentTheme('#10b981', '#34d399', this)">Emerald Aegis</button>
+              <button class="chip-btn" onclick="setAccentTheme('#f97316', '#fb923c', this)">Amber Sun</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Rapid Preset Shortcuts</label>
+            <div class="action-chips">
+              <button class="chip-btn" onclick="applyPreset('transit')">🚆 Metro / Transit</button>
+              <button class="chip-btn" onclick="applyPreset('atm')">🏧 ATM / Checkout</button>
+              <button class="chip-btn" onclick="applyPreset('reading')">📖 Reading Slit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           SECTION 2: NOVEL PRIVACY IDEAS LAB (Upcoming Features)
+           ======================================================== -->
+      <div class="panel-card" style="border-color: rgba(139, 92, 246, 0.3);">
+        <div class="section-title">
+          <span>💡 Novel Privacy Innovations Lab (Target: Infinix X6815D)</span>
+        </div>
+        <div class="section-subtitle">
+          Interactive simulation and edge-case failure analysis for upcoming Android 13 privacy features. Tested against locked invariants I1–I6.
+        </div>
+
+        <!-- SUB-CARD 2A: Front-Camera Peeker Sentry (Gaze Guard) -->
+        <div class="feature-lab-card">
+          <div class="lab-card-header">
+            <div>
+              <span class="lab-badge badge-camera">CameraX & ML Kit Vision</span>
+              <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">1. Front-Camera Peeker Sentry (Gaze Guard)</div>
+            </div>
+            <button class="chip-btn" id="btnTogglePeekerService" onclick="togglePeekerService()">
+              <span id="peekerServiceStateText">Sentry: ACTIVE</span>
+            </button>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--md-text-muted); line-height: 1.5;">
+            Runs CameraX face detection at 0.5 FPS (1 frame every 2 seconds). If an over-the-shoulder peeker is detected looking toward the screen, GhostScreen triggers two tactile haptic pulses and drops an instant privacy veil over the top 70% of the display.
+          </div>
+
+          <div class="action-chips" style="margin-top: 14px;">
+            <button class="chip-btn" onclick="triggerPeekerSimulation()">
+              <span>🚨 Simulate Shoulder Peeker (+1 Face Detected)</span>
+            </button>
+            <button class="chip-btn" onclick="dismissPeekerVeil()">
+              <span>🛡️ Dismiss Veil</span>
+            </button>
+          </div>
+
+          <div class="controls-grid" style="margin-top: 14px;">
+            <div class="control-group">
+              <label class="control-label">Secondary Face Area Ratio Threshold (ρ)</label>
+              <div class="slider-container">
+                <input type="range" id="peekerRatioSlider" min="5" max="50" value="20" oninput="updatePeekerSensitivity(this.value)">
+                <span class="slider-val" id="peekerRatioVal">0.20</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label class="control-label">Head Yaw Angle Tolerance (|θ|)</label>
+              <div class="slider-container">
+                <input type="range" id="peekerAngleSlider" min="15" max="45" value="25" oninput="updatePeekerAngle(this.value)">
+                <span class="slider-val" id="peekerAngleVal">25°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-World Edge Case Callout Box -->
+          <div class="edge-case-box">
+            <div class="edge-case-header">
+              <span>⚠️ Real-World Android Edge Cases & Failures</span>
+            </div>
+            <ul style="padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>Android 12+ Green Privacy Indicator:</strong> Android enforces a persistent green dot in the status bar whenever the camera HAL is streaming. Users may find background camera polling alarming. (Notice the green dot glowing in the simulated status bar!).</li>
+              <li><strong>Camera Hardware Contention:</strong> Android restricts camera sensors to single-process exclusivity. If the user launches Instagram, Snapchat, or native Camera, the system dispatches <code>onDisconnected()</code>. GhostScreen must yield gracefully via <code>CameraManager.AvailabilityCallback</code>.</li>
+              <li><strong>Battery & Low Light:</strong> Even at 0.5 FPS, opening the sensor powers the hardware ISP (140–280 mA drain on MediaTek). In dark environments, high sensor noise causes false alarms unless gated by the ambient light sensor (<10 lux).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SUB-CARD 2B: Decoy PIN Touch Scrambler -->
+        <div class="feature-lab-card">
+          <div class="lab-card-header">
+            <div>
+              <span class="lab-badge badge-scramble">Touch Sandboxing & Physics</span>
+              <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">2. Decoy PIN Touch Scrambler</div>
+            </div>
+            <button class="chip-btn" id="btnToggleScrambler" onclick="togglePinScrambler()">
+              <span id="scramblerStateText">Scrambler: ACTIVE</span>
+            </button>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--md-text-muted); line-height: 1.5;">
+            When entering a banking PIN or password, GhostScreen renders dummy touch ripple circles at randomized coordinates simultaneously, confounding shoulder-surfers and security cameras tracking finger position.
+          </div>
+
+          <div class="controls-grid" style="margin-top: 14px;">
+            <div class="control-group">
+              <label class="control-label">Decoy Ripple Multiplier (K Dummy Waves)</label>
+              <div class="slider-container">
+                <input type="range" id="decoyCountSlider" min="1" max="5" value="3" oninput="updateDecoyCount(this.value)">
+                <span class="slider-val" id="decoyCountVal">3</span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label">User Confidence Dot Mode</label>
+              <div class="action-chips">
+                <button class="chip-btn active" id="btnConfidenceMode" onclick="toggleConfidenceMode()">
+                  <span>🎯 Core Dot (Solves User Confusion)</span>
+                </button>
+                <button class="chip-btn" id="btnLagSim" onclick="toggleLagSimulation()">
+                  <span>⏱️ Simulate 60ms Lag</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Test Tap Pad directly in Studio -->
+          <div style="margin-top: 14px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 0.75rem; font-weight: 600; color: #a5b4fc;">QUICK TEST PAD (OR TAP PHONE PIN PAD)</span>
+              <button class="chip-btn" style="padding: 4px 10px; font-size: 0.72rem;" onclick="switchApp('appPinPad', document.getElementById('chipPinPad'))">Switch Phone to PIN Pad</button>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center;" id="studioTestButtons">
+              <button class="chip-btn" style="min-width: 45px; justify-content: center; font-weight: 700;" onpointerdown="handleKeypadTap('7', event, this)">7</button>
+              <button class="chip-btn" style="min-width: 45px; justify-content: center; font-weight: 700;" onpointerdown="handleKeypadTap('8', event, this)">8</button>
+              <button class="chip-btn" style="min-width: 45px; justify-content: center; font-weight: 700;" onpointerdown="handleKeypadTap('9', event, this)">9</button>
+              <button class="chip-btn" style="min-width: 45px; justify-content: center; font-weight: 700;" onpointerdown="handleKeypadTap('0', event, this)">0</button>
+            </div>
+          </div>
+
+          <!-- Real-World Edge Case Callout Box -->
+          <div class="edge-case-box">
+            <div class="edge-case-header">
+              <span>⚠️ Real-World Android Edge Cases & Failures</span>
+            </div>
+            <ul style="padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>User Cognitive Confusion:</strong> Spawning 4 identical ripples causes the user to hesitate and lose muscle memory. Mitigation: GhostScreen renders a subtle micro-dot in the legitimate tap, visible only from the primary viewing angle.</li>
+              <li><strong>Gboard / IME Sandboxing:</strong> Android software keyboards run in isolated <code>InputMethodService</code> windows. GhostScreen's <code>FLAG_NOT_TOUCHABLE</code> overlay (Invariant I1) cannot intercept raw touches on Gboard. Scrambling is strictly feasible on custom in-app PIN pads.</li>
+              <li><strong>High-Speed Slow-Mo Attacks:</strong> If decoys lag by even 1 frame (>16.6 ms), 120 FPS smartphone cameras can isolate the real tap. All decoy ripples must be rendered synchronously in the exact same draw pass.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SUB-CARD 2C: Anti-OCR Moiré Watermark Noise -->
+        <div class="feature-lab-card">
+          <div class="lab-card-header">
+            <div>
+              <span class="lab-badge badge-optics">Spatial Frequency & Steganography</span>
+              <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">3. Anti-OCR Moiré Watermark Noise</div>
+            </div>
+            <button class="chip-btn" id="btnToggleMoire" onclick="toggleMoireGrid()">
+              <span id="moireStateText">Moiré: DISABLED</span>
+            </button>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--md-text-muted); line-height: 1.5;">
+            Renders a micro-steganographic periodic grid over confidential text. Exploits optical aliasing between display subpixels and external camera sensors, causing severe moiré interference that degrades optical OCR accuracy.
+          </div>
+
+          <div class="controls-grid" style="margin-top: 14px;">
+            <div class="control-group">
+              <label class="control-label">Grating Pitch / Spatial Frequency (p)</label>
+              <div class="slider-container">
+                <input type="range" id="moirePitchSlider" min="2" max="12" value="6" oninput="updateMoirePitch(this.value)">
+                <span class="slider-val" id="moirePitchVal">6px</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label class="control-label">Grating Angle (θ)</label>
+              <div class="slider-container">
+                <input type="range" id="moireAngleSlider" min="0" max="60" value="45" oninput="updateMoireAngle(this.value)">
+                <span class="slider-val" id="moireAngleVal">45°</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-chips" style="margin-top: 12px;">
+            <button class="chip-btn active" id="btnMoireDrift" onclick="toggleMoireDrift()">
+              <span>🔄 60Hz Dynamic Phase-Drift (Beats Shutter)</span>
+            </button>
+            <button class="chip-btn" id="btnDeMoireSim" onclick="toggleDeMoireSim()">
+              <span>🤖 Test External AI De-Moiré ISP</span>
+            </button>
+          </div>
+
+          <!-- Real-Time Camera OCR Viewfinder Box -->
+          <div class="camera-ocr-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 0.78rem; font-weight: 700; color: #fff;">📸 SIMULATED SMARTPHONE CAMERA & OCR VIEWFINDER</span>
+              <span id="ocrScanBadge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">READABLE (98.9%)</span>
+            </div>
+            <div class="viewfinder-reticle" id="viewfinderReticle">
+              <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: #94a3b8; font-family: monospace;">
+                <span>[CAM-1: 4K 60FPS]</span>
+                <span>f/1.8 · ISO 100</span>
+              </div>
+              <div style="margin: 10px 0; font-size: 0.85rem; font-weight: 700; color: #fff;" id="ocrCapturedText">
+                Detected Text: "$28,490.50 (VaultBank Balance)"
+              </div>
+              <div class="ocr-meter-bar">
+                <div class="ocr-meter-fill" id="ocrMeterFill"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #94a3b8;">
+                <span id="ocrStatusMsg">Optical Aliasing: None · OCR Confidence High</span>
+                <span id="ocrConfidenceText">98.9%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-World Edge Case Callout Box -->
+          <div class="edge-case-box">
+            <div class="edge-case-header">
+              <span>⚠️ Real-World Android Edge Cases & Failures</span>
+            </div>
+            <ul style="padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>Computational Photography & AI De-Moiré:</strong> Modern smartphones (Pixel, iPhone, Galaxy) feature multi-frame HDR and deep-learning CNNs that actively remove static moiré. Mitigation: GhostScreen shifts the grating phase at 60 Hz, defeating single-frame de-moiré.</li>
+              <li><strong>PenTile OLED Subpixel Matrix:</strong> The Infinix X6815D uses diamond PenTile OLED pixels. High-contrast static grids can produce green/magenta chromatic fringing. Mitigation: Use diagonal sinusoidal shading with fine modulation ($m \le 0.16$).</li>
+              <li><strong>Screenshots vs. Photography:</strong> Moiré protects exclusively against external cameras photographing the physical screen. It has zero effect on software screenshots.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- SUB-CARD 2D: Task-Switcher Camouflage (Recents Shield) -->
+        <div class="feature-lab-card">
+          <div class="lab-card-header">
+            <div>
+              <span class="lab-badge badge-system">SurfaceFlinger & WindowManager</span>
+              <div style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">4. Task-Switcher Camouflage (Recents Shield)</div>
+            </div>
+            <button class="chip-btn" id="btnToggleRecentsShield" onclick="toggleRecentsShield()">
+              <span id="recentsShieldStateText">Shield: ACTIVE</span>
+            </button>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--md-text-muted); line-height: 1.5;">
+            Automatically stamps a solid, opaque privacy veil over the window the instant you swipe up to open the Android Recents / App Switcher, preventing banking numbers or private chats from being captured in system carousel snapshots.
+          </div>
+
+          <div class="action-chips" style="margin-top: 14px;">
+            <button class="chip-btn" onclick="triggerRecentsTransition()">
+              <span>📲 Simulate Swipe-Up to Recents</span>
+            </button>
+            <button class="chip-btn" id="btnRecentsLatencyRace" onclick="toggleRecentsLatencyRace()">
+              <span>⏱️ Latency Race: 0ms (Pre-Emptive)</span>
+            </button>
+          </div>
+
+          <!-- Real-World Edge Case Callout Box -->
+          <div class="edge-case-box">
+            <div class="edge-case-header">
+              <span>⚠️ Real-World Android Edge Cases & Failures</span>
+            </div>
+            <ul style="padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+              <li><strong>Quickstep Gesture Transition Latency:</strong> In Android 10+, the system snapshot is taken at $t=0$ when the swipe gesture begins. If an app relies on <code>AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED</code> (arriving at $t=+80\sim150\text{ ms}$), the unmasked window has ALREADY been recorded in the system thumbnail!</li>
+              <li><strong>Cross-App FLAG_SECURE Limitations:</strong> An accessibility service cannot inject <code>FLAG_SECURE</code> into third-party apps. GhostScreen must pre-emptively stamp its own top-level overlay before the thumbnail buffer is serialized.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================
+           SECTION 3: SENSORS & CONTEXTUAL SHIELDING
+           ======================================================== -->
+      <div class="panel-card">
+        <div class="section-title">
+          <span>🧠 Context-Aware Shielding & Sensor Triggers</span>
+        </div>
+        <div class="section-subtitle">
+          Sensory capabilities that operate 100% offline, zero-telemetry, and preserve GhostScreen's locked invariants.
+        </div>
+
+        <div class="action-chips">
+          <button class="chip-btn" id="btnTiltTrigger" onclick="togglePhoneTilt()">
+            <span>📐 Gyroscope Shoulder-Surfer Tilt Shield</span>
+          </button>
+          <button class="chip-btn" id="btnAiScan" onclick="triggerAiFieldDetection()">
+            <span>✨ AI Sensitive Field Auto-Shielding</span>
+          </button>
+          <button class="chip-btn" onclick="simulateQuickSettingsToggle()">
+            <span>📲 Quick Settings Instant Toggle</span>
+          </button>
+          <button class="chip-btn" onclick="triggerPanicCloak()">
+            <span>🚨 Panic Double-Shake Disguise</span>
+          </button>
+        </div>
+
+        <!-- Dynamic 3D Gyroscope & Spotlight Aperture Controls -->
+        <div class="controls-grid" style="margin-top: 18px;">
+          <div class="control-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="control-label" style="margin-bottom: 0;">📐 3D Gyroscope Phone Tilt Angle</label>
+              <span id="tiltBadge" style="font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">DIRECT (0°)</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="tiltSlider" min="0" max="65" value="0" oninput="setTiltAngle(this.value)">
+              <span class="slider-val" id="tiltVal">0°</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--md-text-muted); margin-top: 4px;">
+              Slide to tilt phone in 3D. Shoulder-surfer blackout snaps to 100% OLED black when angle ≥ 40°.
+            </div>
+          </div>
+
+          <div class="control-group" id="spotlightControlGroup" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="control-label" style="margin-bottom: 0;">🔦 Spotlight Beam Radius</label>
+              <span id="spotlightRadiusVal" class="slider-val">80px</span>
+            </div>
+            <div class="slider-container">
+              <input type="range" id="spotlightSlider" min="45" max="130" value="80" oninput="setSpotlightRadius(this.value)">
+              <span class="slider-val">Size</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--md-text-muted); margin-top: 4px;">
+              Move cursor/touch on screen to aim torch aperture.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           SECTION 4: ARCHITECTURAL DEEP-DIVES & ROADMAP
+           ======================================================== -->
+      <div>
+        <div class="section-title">
+          <span>💡 High-Impact Feature & UI Proposals</span>
+        </div>
+        <div class="section-subtitle">
+          Detailed engineering analysis for features documented in <code>docs/UPCOMING_FEATURES.md</code>.
+        </div>
+
+        <div class="ideas-grid">
+          
+          <!-- Idea 1 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-innovative">New Geometry</div>
+            <div class="idea-title">
+              <span>Dynamic Island / Pill Peek Mode</span>
+              <span>💊</span>
+            </div>
+            <div class="idea-desc">
+              A high-precision horizontal capsule that frames only the specific line of text or 2FA code you are inspecting. Uses curved pill caps (<code>Path.addRoundRect</code>), leaving zero peripheral visibility.
+            </div>
+            <div class="idea-meta">
+              <span>Preserves Invariants I1 & I6</span>
+              <button class="idea-try-btn" onclick="setMode('pill')">Try in Mockup</button>
+            </div>
+          </div>
+
+          <!-- Idea 2 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-sensor">Sensor Automation</div>
+            <div class="idea-title">
+              <span>Shoulder-Surfer Tilt Blackout</span>
+              <span>📐</span>
+            </div>
+            <div class="idea-desc">
+              Uses hardware <code>SensorManager.SENSOR_ROTATION_VECTOR</code>. If viewing angle deviates >40° from your primary vector, overlay automatically snaps to 100% OLED black.
+            </div>
+            <div class="idea-meta">
+              <span>Zero battery drain (<1% wake lock)</span>
+              <button class="idea-try-btn" onclick="togglePhoneTilt()">Simulate Tilt</button>
+            </div>
+          </div>
+
+          <!-- Idea 3 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ai">Accessibility AI</div>
+            <div class="idea-title">
+              <span>Node-Level Sensitive Field Auto-Mask</span>
+              <span>✨</span>
+            </div>
+            <div class="idea-desc">
+              Inspects <code>AccessibilityNodeInfo</code> tree for <code>isPassword</code>, regex matching ($, IBAN, OTP), and spawns micro-mask windows directly over the sensitive fields without obscuring the rest of the app.
+            </div>
+            <div class="idea-meta">
+              <span>Zero MediaProjection / Offline</span>
+              <button class="idea-try-btn" onclick="triggerAiFieldDetection()">Simulate Detection</button>
+            </div>
+          </div>
+
+          <!-- Idea 4 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ui">Material 3 Expressive</div>
+            <div class="idea-title">
+              <span>Haptic Textures & Hardware Knots</span>
+              <span>📳</span>
+            </div>
+            <div class="idea-desc">
+              Synthesizes Android <code>VibrationEffect.createPrebaked</code> notches on 25%, 50%, 75% opacity crossings and edge resizing snaps, providing a physical, mechanical feel.
+            </div>
+            <div class="idea-meta">
+              <span>Supported via VibrationEffect</span>
+              <button class="idea-try-btn" onclick="playClickHaptic()">Play Tactile Click</button>
+            </div>
+          </div>
+
+          <!-- Idea 5 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-innovative">Optics Simulation</div>
+            <div class="idea-title">
+              <span>Micro-Louver Privacy Shader</span>
+              <span>🕶️</span>
+            </div>
+            <div class="idea-desc">
+              Replaces flat black masks with fine 45-degree micro-louvers rendered in hardware Canvas (<code>BitmapShader</code>). Simulates 3M privacy filter glass, obscuring wide viewing angles.
+            </div>
+            <div class="idea-meta">
+              <span>60 FPS on Infinix MediaTek</span>
+              <button class="idea-try-btn" onclick="setTexture('louver')">Apply Shader</button>
+            </div>
+          </div>
+
+          <!-- Idea 6 -->
+          <div class="idea-card">
+            <div class="idea-badge badge-ui">Instant Action</div>
+            <div class="idea-title">
+              <span>Lock Screen & Tile Quick Controls</span>
+              <span>⚡</span>
+            </div>
+            <div class="idea-desc">
+              Expand <code>GhostScreenTileService</code> with Android 14 lockscreen quick access buttons and dynamic status feedback, enabling 1-tap protection before unlocking your phone.
+            </div>
+            <div class="idea-meta">
+              <span>Android 13+ QS Tile standard</span>
+              <button class="idea-try-btn" onclick="simulateQuickSettingsToggle()">Test QS Action</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Interactive Toast Feedback -->
+  <div class="toast-msg" id="toastMsg">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastContent">Action triggered</span>
+  </div>
+
+  <script>
+    // ==========================================
+    // AUDIO / TACTILE HAPTIC SYNTHESIZER
+    // ==========================================
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playClickHaptic(freq = 320, type = 'sine', duration = 0.035) {
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    const state = {
+      isOverlayShowing: true,
+      currentMode: 'box', // 'box', 'split', 'spotlight', 'pill'
+      activeAppId: 'appBank',
+      previousAppId: 'appBank',
+      opacity: 85,
+      savedOpacity: 85,
+      texture: 'solid',
+      isTilted: false,
+      tiltAngle: 0,
+      isAiShieldActive: false,
+      // Novel Privacy Features State
+      peeker: {
+        isServiceActive: true,
+        isPeekerDetected: false,
+        isVeilDropped: false,
+        ratioThreshold: 0.20,
+        yawAngleLimit: 25,
+        scanTimer: null,
+        frameCount: 1
+      },
+      scrambler: {
+        isActive: true,
+        decoyCount: 3,
+        userConfidenceDot: true,
+        hasLatencyLag: false,
+        enteredPin: ''
+      },
+      moire: {
+        isActive: false,
+        pitch: 6,
+        angle: 45,
+        isDrifting: true,
+        aiDeMoireActive: false
+      },
+      recents: {
+        isShieldActive: true,
+        isLatencyRace: false, // false = 0ms pre-emptive, true = 120ms late accessibility callback
+        inRecentsView: false
+      },
+      box: {
+        top: 140,
+        bottom: 340,
+        left: 20,
+        right: 340
+      },
+      split: {
+        top: 200,
+        bottom: 360
+      },
+      spotlight: {
+        cx: 180,
+        cy: 260,
+        radius: 80
+      },
+      pill: {
+        top: 200,
+        height: 80
+      }
+    };
+
+    // DOM Elements
+    const phoneScreen = document.getElementById('phoneScreen');
+    const ghostOverlay = document.getElementById('ghostOverlay');
+    const maskTop = document.getElementById('maskTop');
+    const maskBottom = document.getElementById('maskBottom');
+    const maskLeft = document.getElementById('maskLeft');
+    const maskRight = document.getElementById('maskRight');
+    const viewportBox = document.getElementById('viewportBox');
+    const handleTL = document.getElementById('handleTL');
+    const handleTR = document.getElementById('handleTR');
+    const handleBL = document.getElementById('handleBL');
+    const handleBR = document.getElementById('handleBR');
+    const splitTop = document.getElementById('splitTop');
+    const splitBottom = document.getElementById('splitBottom');
+    const splitTopBar = document.getElementById('splitTopBar');
+    const splitBottomBar = document.getElementById('splitBottomBar');
+    const spotlightMask = document.getElementById('spotlightMask');
+    const pillViewport = document.getElementById('pillViewport');
+    const dropBadge = document.getElementById('dropBadge');
+    const dropLabel = document.getElementById('dropLabel');
+    const opacitySlider = document.getElementById('opacitySlider');
+    const opacityVal = document.getElementById('opacityVal');
+    const phoneDevice = document.getElementById('phoneDevice');
+    const aiShieldsContainer = document.getElementById('aiShieldsContainer');
+    const tiltSlider = document.getElementById('tiltSlider');
+    const tiltVal = document.getElementById('tiltVal');
+    const tiltBadge = document.getElementById('tiltBadge');
+    const spotlightControlGroup = document.getElementById('spotlightControlGroup');
+    const spotlightSlider = document.getElementById('spotlightSlider');
+    const spotlightRadiusVal = document.getElementById('spotlightRadiusVal');
+
+    // Novel Feature DOM Elements
+    const statusCameraDot = document.getElementById('statusCameraDot');
+    const peekerHud = document.getElementById('peekerHud');
+    const hudPeekerFace = document.getElementById('hudPeekerFace');
+    const hudStatusText = document.getElementById('hudStatusText');
+    const peekerVeil = document.getElementById('peekerVeil');
+    const phoneRippleLayer = document.getElementById('phoneRippleLayer');
+    const moireGridLayer = document.getElementById('moireGridLayer');
+    const appRecents = document.getElementById('appRecents');
+    const recentsCamouflageVeil = document.getElementById('recentsCamouflageVeil');
+    const ocrMeterFill = document.getElementById('ocrMeterFill');
+    const ocrConfidenceText = document.getElementById('ocrConfidenceText');
+    const ocrCapturedText = document.getElementById('ocrCapturedText');
+    const ocrStatusMsg = document.getElementById('ocrStatusMsg');
+    const ocrScanBadge = document.getElementById('ocrScanBadge');
+
+    // Layout constants
+    const SCREEN_W = 360;
+    const SCREEN_H = 682;
+
+    // ==========================================
+    // OVERLAY RENDER & UPDATE LOGIC
+    // ==========================================
+    function updateOverlayLayout() {
+      const alpha = state.opacity / 100;
+      const maskEdges = [maskTop, maskBottom, maskLeft, maskRight, splitTop, splitBottom];
+      
+      maskEdges.forEach(m => {
+        if (m) m.style.opacity = alpha;
+      });
+
+      if (state.currentMode === 'box') {
+        maskTop.style.display = 'block';
+        maskBottom.style.display = 'block';
+        maskLeft.style.display = 'block';
+        maskRight.style.display = 'block';
+        viewportBox.style.display = 'block';
+        handleTL.style.display = 'flex';
+        handleTR.style.display = 'flex';
+        handleBL.style.display = 'flex';
+        handleBR.style.display = 'flex';
+
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        const t = Math.max(0, state.box.top);
+        const b = Math.min(SCREEN_H, state.box.bottom);
+        const l = Math.max(0, state.box.left);
+        const r = Math.min(SCREEN_W, state.box.right);
+
+        maskTop.style.top = '0px';
+        maskTop.style.height = `${t}px`;
+        maskTop.style.width = '100%';
+        maskTop.style.left = '0px';
+
+        maskBottom.style.top = `${b}px`;
+        maskBottom.style.height = `${SCREEN_H - b}px`;
+        maskBottom.style.width = '100%';
+        maskBottom.style.left = '0px';
+
+        maskLeft.style.top = `${t}px`;
+        maskLeft.style.height = `${b - t}px`;
+        maskLeft.style.width = `${l}px`;
+        maskLeft.style.left = '0px';
+
+        maskRight.style.top = `${t}px`;
+        maskRight.style.height = `${b - t}px`;
+        maskRight.style.left = `${r}px`;
+        maskRight.style.width = `${SCREEN_W - r}px`;
+
+        viewportBox.style.top = `${t}px`;
+        viewportBox.style.left = `${l}px`;
+        viewportBox.style.width = `${r - l}px`;
+        viewportBox.style.height = `${b - t}px`;
+
+        handleTL.style.top = `${t}px`;
+        handleTL.style.left = `${l}px`;
+
+        handleTR.style.top = `${t}px`;
+        handleTR.style.left = `${r}px`;
+
+        handleBL.style.top = `${b}px`;
+        handleBL.style.left = `${l}px`;
+
+        handleBR.style.top = `${b}px`;
+        handleBR.style.left = `${r}px`;
+
+      } else if (state.currentMode === 'split') {
+        maskTop.style.display = 'none';
+        maskBottom.style.display = 'none';
+        maskLeft.style.display = 'none';
+        maskRight.style.display = 'none';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        splitTop.style.display = 'block';
+        splitBottom.style.display = 'block';
+
+        splitTop.style.top = '0px';
+        splitTop.style.height = `${state.split.top}px`;
+
+        splitBottom.style.top = `${state.split.bottom}px`;
+        splitBottom.style.height = `${SCREEN_H - state.split.bottom}px`;
+
+      } else if (state.currentMode === 'spotlight') {
+        maskTop.style.display = 'none';
+        maskBottom.style.display = 'none';
+        maskLeft.style.display = 'none';
+        maskRight.style.display = 'none';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        pillViewport.style.display = 'none';
+
+        spotlightMask.style.display = 'block';
+        const cx = state.spotlight.cx;
+        const cy = state.spotlight.cy;
+        const radius = state.spotlight.radius;
+        spotlightMask.style.background = `radial-gradient(circle at ${cx}px ${cy}px, transparent ${radius}px, rgba(0,0,0,${alpha}) ${radius + 18}px)`;
+
+      } else if (state.currentMode === 'pill') {
+        maskTop.style.display = 'block';
+        maskBottom.style.display = 'block';
+        maskLeft.style.display = 'block';
+        maskRight.style.display = 'block';
+        viewportBox.style.display = 'none';
+        handleTL.style.display = 'none';
+        handleTR.style.display = 'none';
+        handleBL.style.display = 'none';
+        handleBR.style.display = 'none';
+        splitTop.style.display = 'none';
+        splitBottom.style.display = 'none';
+        spotlightMask.style.display = 'none';
+        pillViewport.style.display = 'flex';
+
+        const t = Math.max(16, Math.min(SCREEN_H - state.pill.height - 16, state.pill.top));
+        const b = t + state.pill.height;
+        const l = 20;
+        const r = SCREEN_W - 20;
+
+        maskTop.style.top = '0px';
+        maskTop.style.height = `${t}px`;
+        maskTop.style.width = '100%';
+        maskTop.style.left = '0px';
+
+        maskBottom.style.top = `${b}px`;
+        maskBottom.style.height = `${SCREEN_H - b}px`;
+        maskBottom.style.width = '100%';
+        maskBottom.style.left = '0px';
+
+        maskLeft.style.top = `${t}px`;
+        maskLeft.style.height = `${b - t}px`;
+        maskLeft.style.width = `${l}px`;
+        maskLeft.style.left = '0px';
+
+        maskRight.style.top = `${t}px`;
+        maskRight.style.height = `${b - t}px`;
+        maskRight.style.left = `${r}px`;
+        maskRight.style.width = `${SCREEN_W - r}px`;
+
+        pillViewport.style.top = `${t}px`;
+        pillViewport.style.left = `${l}px`;
+        pillViewport.style.width = `${r - l}px`;
+        pillViewport.style.height = `${b - t}px`;
+      }
+
+      dropLabel.innerText = `${state.opacity}%`;
+      opacityVal.innerText = `${state.opacity}%`;
+      opacitySlider.value = state.opacity;
+    }
+
+    // ==========================================
+    // UNIFIED POINTER DRAGGING ENGINE
+    // ==========================================
+    let activeDrag = null;
+
+    function initCornerDrag(handleEl, cornerKey) {
+      handleEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try { handleEl.setPointerCapture(e.pointerId); } catch (_) {}
+        activeDrag = {
+          type: 'corner',
+          corner: cornerKey,
+          startX: e.clientX,
+          startY: e.clientY,
+          initBox: { ...state.box }
+        };
+        playClickHaptic(440, 'sine', 0.04);
+      });
+    }
+
+    initCornerDrag(handleTL, 'tl');
+    initCornerDrag(handleTR, 'tr');
+    initCornerDrag(handleBL, 'bl');
+    initCornerDrag(handleBR, 'br');
+
+    function initSplitDrag(barEl, isTop) {
+      if (!barEl) return;
+      barEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try { barEl.setPointerCapture(e.pointerId); } catch (_) {}
+        activeDrag = {
+          type: 'split',
+          isTop: isTop,
+          startY: e.clientY,
+          initVal: isTop ? state.split.top : state.split.bottom
+        };
+        playClickHaptic(420, 'triangle', 0.04);
+      });
+    }
+
+    initSplitDrag(splitTopBar, true);
+    initSplitDrag(splitBottomBar, false);
+
+    pillViewport.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try { pillViewport.setPointerCapture(e.pointerId); } catch (_) {}
+      activeDrag = {
+        type: 'pill',
+        startY: e.clientY,
+        initTop: state.pill.top
+      };
+      playClickHaptic(480, 'sine', 0.03);
+    });
+
+    dropBadge.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try { dropBadge.setPointerCapture(e.pointerId); } catch (_) {}
+      activeDrag = {
+        type: 'dropBadge',
+        startY: e.clientY,
+        initOpacity: state.opacity,
+        moved: false
+      };
+    });
+
+    function updateSpotlightFromPointer(e) {
+      const rect = phoneScreen.getBoundingClientRect();
+      const x = Math.max(20, Math.min(SCREEN_W - 20, e.clientX - rect.left));
+      const y = Math.max(20, Math.min(SCREEN_H - 20, e.clientY - rect.top));
+      state.spotlight.cx = Math.round(x);
+      state.spotlight.cy = Math.round(y);
+      updateOverlayLayout();
+    }
+
+    phoneScreen.addEventListener('pointermove', (e) => {
+      if (state.currentMode === 'spotlight' && !activeDrag) {
+        updateSpotlightFromPointer(e);
+      }
+    });
+
+    phoneScreen.addEventListener('pointerdown', (e) => {
+      if (state.currentMode === 'spotlight') {
+        updateSpotlightFromPointer(e);
+        playClickHaptic(520, 'sine', 0.02);
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!activeDrag) return;
+
+      if (activeDrag.type === 'corner') {
+        const dx = e.clientX - activeDrag.startX;
+        const dy = e.clientY - activeDrag.startY;
+        const b = activeDrag.initBox;
+
+        if (activeDrag.corner === 'tl') {
+          state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+          state.box.left = Math.min(b.left + dx, state.box.right - 80);
+        } else if (activeDrag.corner === 'tr') {
+          state.box.top = Math.min(b.top + dy, state.box.bottom - 60);
+          state.box.right = Math.max(b.right + dx, state.box.left + 80);
+        } else if (activeDrag.corner === 'bl') {
+          state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+          state.box.left = Math.min(b.left + dx, state.box.right - 80);
+        } else if (activeDrag.corner === 'br') {
+          state.box.bottom = Math.max(b.bottom + dy, state.box.top + 60);
+          state.box.right = Math.max(b.right + dx, state.box.left + 80);
+        }
+        updateOverlayLayout();
+
+      } else if (activeDrag.type === 'split') {
+        const dy = e.clientY - activeDrag.startY;
+        if (activeDrag.isTop) {
+          const newTop = Math.max(30, Math.min(state.split.bottom - 50, activeDrag.initVal + dy));
+          if (Math.abs(newTop - state.split.top) >= 1) {
+            state.split.top = newTop;
+            updateOverlayLayout();
+          }
+        } else {
+          const newBot = Math.min(SCREEN_H - 30, Math.max(state.split.top + 50, activeDrag.initVal + dy));
+          if (Math.abs(newBot - state.split.bottom) >= 1) {
+            state.split.bottom = newBot;
+            updateOverlayLayout();
+          }
+        }
+
+      } else if (activeDrag.type === 'pill') {
+        const dy = e.clientY - activeDrag.startY;
+        state.pill.top = Math.max(20, Math.min(SCREEN_H - state.pill.height - 20, activeDrag.initTop + dy));
+        updateOverlayLayout();
+
+      } else if (activeDrag.type === 'dropBadge') {
+        const dy = activeDrag.startY - e.clientY;
+        if (Math.abs(dy) > 4) activeDrag.moved = true;
+        const newOp = Math.min(100, Math.max(10, Math.round(activeDrag.initOpacity + dy * 0.5)));
+        if (newOp !== state.opacity) {
+          state.opacity = newOp;
+          if (newOp % 20 === 0) playClickHaptic(520, 'sine', 0.02);
+          updateOverlayLayout();
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (activeDrag) {
+        if (activeDrag.type === 'dropBadge' && !activeDrag.moved) {
+          cycleOpacity();
+        } else {
+          playClickHaptic(360, 'sine', 0.03);
+        }
+        activeDrag = null;
+      }
+    });
+
+    window.addEventListener('pointercancel', () => {
+      activeDrag = null;
+    });
+
+    // ==========================================
+    // CONTROLS & EVENT HANDLERS
+    // ==========================================
+    function setMode(mode) {
+      state.currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btnMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (spotlightControlGroup) {
+        spotlightControlGroup.style.display = (mode === 'spotlight') ? 'block' : 'none';
+      }
+
+      playClickHaptic(500, 'triangle', 0.04);
+      showToast(`Switched geometry to ${mode.toUpperCase()} mode`);
+      updateOverlayLayout();
+    }
+
+    function updateOpacity(val) {
+      state.opacity = parseInt(val, 10);
+      state.savedOpacity = state.opacity;
+      if (state.opacity % 25 === 0) {
+        playClickHaptic(600, 'sine', 0.03);
+      }
+      updateOverlayLayout();
+    }
+
+    function cycleOpacity() {
+      playClickHaptic(480, 'sine', 0.04);
+      state.opacity = (state.opacity >= 95) ? 25 : state.opacity + 25;
+      state.savedOpacity = state.opacity;
+      updateOverlayLayout();
+      showToast(`Overlay opacity stepped to ${state.opacity}%`);
+    }
+
+    function toggleOverlay() {
+      state.isOverlayShowing = !state.isOverlayShowing;
+      ghostOverlay.style.display = state.isOverlayShowing ? 'block' : 'none';
+      ghostOverlay.style.opacity = state.isOverlayShowing ? '1' : '0';
+      ghostOverlay.style.pointerEvents = 'none'; // Maintain Invariant I1 hollow touch passthrough
+      const sub = document.getElementById('mockupCardSub');
+      if (sub) sub.innerText = state.isOverlayShowing ? 'Overlay ACTIVE (Tap to Disarm)' : 'Overlay IDLE (Tap to Arm)';
+      playClickHaptic(state.isOverlayShowing ? 520 : 260, 'sine', 0.06);
+      showToast(state.isOverlayShowing ? 'Privacy Overlay Armed' : 'Privacy Overlay Disarmed');
+    }
+
+    function setTexture(tex, btn) {
+      state.texture = tex;
+      const maskElements = document.querySelectorAll('.mask-edge, .split-strip');
+      maskElements.forEach(el => {
+        el.classList.remove('texture-louver', 'texture-matrix', 'texture-noise');
+        if (tex !== 'solid') el.classList.add(`texture-${tex}`);
+      });
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      playClickHaptic(420, 'square', 0.03);
+      showToast(`Applied shader texture: ${tex.toUpperCase()}`);
+    }
+
+    function setAccentTheme(primary, accent, btn) {
+      document.documentElement.style.setProperty('--md-primary', primary);
+      document.documentElement.style.setProperty('--md-accent', accent);
+      document.documentElement.style.setProperty('--md-accent-glow', `${primary}55`);
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      playClickHaptic(580, 'sine', 0.04);
+      showToast(`Material 3 Expressive theme updated`);
+    }
+
+    function switchApp(appId, btn) {
+      if (state.activeAppId !== 'appRecents' && appId === 'appRecents') {
+        state.previousAppId = state.activeAppId;
+      } else if (appId !== 'appRecents') {
+        state.previousAppId = appId;
+      }
+      state.activeAppId = appId;
+
+      // Adapt viewport box bounds to active app
+      if (appId === 'appPinPad') {
+        state.box.top = 180;
+        state.box.bottom = 590;
+      } else if (appId === 'appBank') {
+        state.box.top = 140;
+        state.box.bottom = 340;
+      } else if (appId === 'appChat') {
+        state.box.top = 180;
+        state.box.bottom = 460;
+      } else if (appId === 'appAuth') {
+        state.box.top = 130;
+        state.box.bottom = 440;
+      }
+
+      document.querySelectorAll('.app-screen, .recents-screen').forEach(s => s.classList.remove('active'));
+      const targetApp = document.getElementById(appId);
+      if (targetApp) {
+        targetApp.classList.add('active');
+        if (appId === 'appRecents') {
+          targetApp.style.display = 'flex';
+          state.recents.inRecentsView = true;
+        } else {
+          appRecents.style.display = 'none';
+          state.recents.inRecentsView = false;
+        }
+      }
+      if (btn) {
+        btn.parentElement.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      clearAiShields();
+      playClickHaptic(360, 'triangle', 0.03);
+      updateOverlayLayout();
+      updateOcrViewfinder();
+    }
+
+    function applyPreset(preset) {
+      if (preset === 'transit') {
+        state.currentMode = 'box';
+        state.opacity = 95;
+        state.savedOpacity = 95;
+        state.box = { top: 120, bottom: 280, left: 15, right: 345 };
+        setTextTexture('louver');
+      } else if (preset === 'atm') {
+        state.currentMode = 'pill';
+        state.opacity = 100;
+        state.savedOpacity = 100;
+        state.pill.top = 220;
+        setTextTexture('solid');
+      } else if (preset === 'reading') {
+        state.currentMode = 'split';
+        state.opacity = 90;
+        state.savedOpacity = 90;
+        state.split = { top: 220, bottom: 320 };
+        setTextTexture('solid');
+      }
+      setMode(state.currentMode);
+      updateOverlayLayout();
+      showToast(`Applied preset: ${preset.toUpperCase()}`);
+      playClickHaptic(620, 'sine', 0.05);
+    }
+
+    function setTextTexture(tex) {
+      state.texture = tex;
+      const maskElements = document.querySelectorAll('.mask-edge, .split-strip');
+      maskElements.forEach(el => {
+        el.classList.remove('texture-louver', 'texture-matrix', 'texture-noise');
+        if (tex !== 'solid') el.classList.add(`texture-${tex}`);
+      });
+    }
+
+    function setSpotlightRadius(r) {
+      state.spotlight.radius = parseInt(r, 10);
+      if (spotlightRadiusVal) spotlightRadiusVal.innerText = `${state.spotlight.radius}px`;
+      updateOverlayLayout();
+    }
+
+    // ==========================================
+    // SENSOR & GYROSCOPE SIMULATION
+    // ==========================================
+    function setTiltAngle(deg) {
+      deg = parseInt(deg, 10);
+      state.tiltAngle = deg;
+      if (tiltSlider) tiltSlider.value = deg;
+      if (tiltVal) tiltVal.innerText = `${deg}°`;
+
+      if (deg === 0) {
+        phoneDevice.style.transform = 'none';
+      } else {
+        const factor = deg / 65;
+        phoneDevice.style.transform = `rotate3d(0.4, -1, 0.2, ${deg}deg) scale(${1 - factor * 0.06})`;
+      }
+
+      if (deg >= 40) {
+        if (!state.isTilted) {
+          state.isTilted = true;
+          playClickHaptic(200, 'sawtooth', 0.12);
+          showToast('⚠️ Shoulder-surfer tilt detected (≥40°)! Blackout Cloak engaged.', '🚨');
+        }
+        if (tiltBadge) {
+          tiltBadge.innerText = `BLACKOUT (${deg}°)`;
+          tiltBadge.style.background = 'rgba(239, 68, 68, 0.25)';
+          tiltBadge.style.color = '#fca5a5';
+        }
+        state.opacity = 100;
+      } else {
+        if (state.isTilted) {
+          state.isTilted = false;
+          playClickHaptic(440, 'sine', 0.04);
+          showToast(`Viewing angle restored (${deg}°): Normal opacity resumed.`, '🛡️');
+          state.opacity = state.savedOpacity || 85;
+        }
+        if (tiltBadge) {
+          tiltBadge.innerText = `DIRECT (${deg}°)`;
+          tiltBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+          tiltBadge.style.color = '#6ee7b7';
+        }
+      }
+      updateOverlayLayout();
+    }
+
+    function togglePhoneTilt() {
+      const target = (state.tiltAngle >= 40) ? 0 : 50;
+      setTiltAngle(target);
+    }
+
+    function triggerPanicCloak() {
+      playClickHaptic(180, 'sawtooth', 0.15);
+      state.opacity = 100;
+      state.savedOpacity = 100;
+      updateOverlayLayout();
+      showToast('🚨 PANIC CLOAK ACTIVATED! Screen 100% blacked out.');
+    }
+
+    function simulateQuickSettingsToggle() {
+      toggleOverlay();
+    }
+
+    function clearAiShields() {
+      aiShieldsContainer.innerHTML = '';
+      state.isAiShieldActive = false;
+      const btn = document.getElementById('btnAiScan');
+      if (btn) btn.classList.remove('active');
+    }
+
+    function triggerAiFieldDetection() {
+      state.isAiShieldActive = !state.isAiShieldActive;
+      const btn = document.getElementById('btnAiScan');
+      if (!state.isAiShieldActive) {
+        clearAiShields();
+        showToast('AI node shields dismissed');
+        return;
+      }
+
+      if (btn) btn.classList.add('active');
+      playClickHaptic(720, 'triangle', 0.08);
+
+      aiShieldsContainer.innerHTML = '';
+
+      const bankBalance = document.getElementById('bankBalanceText');
+      const bankCardNum = document.getElementById('bankCardNum');
+      const chatOtp = document.getElementById('chatOtpBubble');
+      const authItem1 = document.getElementById('authItem1');
+
+      const createShieldFor = (el, label) => {
+        if (!el || el.offsetParent === null) return;
+        const rect = el.getBoundingClientRect();
+        const screenRect = phoneScreen.getBoundingClientRect();
+        
+        const top = rect.top - screenRect.top;
+        const left = rect.left - screenRect.left;
+        const width = rect.width;
+        const height = rect.height;
+
+        const shield = document.createElement('div');
+        shield.className = 'ai-field-shield';
+        shield.style.top = `${top - 2}px`;
+        shield.style.left = `${left - 4}px`;
+        shield.style.width = `${width + 8}px`;
+        shield.style.height = `${height + 4}px`;
+        shield.innerHTML = `<span>🔒 ${label}</span>`;
+        shield.onclick = () => {
+          shield.remove();
+          playClickHaptic(500, 'sine', 0.02);
+        };
+        aiShieldsContainer.appendChild(shield);
+      };
+
+      createShieldFor(bankBalance, 'BALANCE MASKED');
+      createShieldFor(bankCardNum, 'CARD NO. MASKED');
+      createShieldFor(chatOtp, 'OTP CODE MASKED');
+      createShieldFor(authItem1, '2FA SECRET MASKED');
+
+      showToast('✨ AI scanned Accessibility tree: sensitive fields shielded!');
+    }
+
+    // ========================================================
+    // NOVEL FEATURE 1: FRONT-CAMERA PEEKER SENTRY (GAZE GUARD)
+    // ========================================================
+    function startPeekerHeartbeat() {
+      if (state.peeker.scanTimer) clearInterval(state.peeker.scanTimer);
+      state.peeker.scanTimer = setInterval(() => {
+        if (!state.peeker.isServiceActive) return;
+        state.peeker.frameCount++;
+        if (!state.peeker.isVeilDropped && hudStatusText) {
+          hudStatusText.innerText = `Scanning (0.5 FPS · Frame #${state.peeker.frameCount}: 1 face centered)`;
+        }
+        // Subtle radar sweep pulse
+        const radarCanvas = document.querySelector('.peeker-radar-canvas');
+        if (radarCanvas) {
+          radarCanvas.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+          setTimeout(() => {
+            radarCanvas.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          }, 400);
+        }
+      }, 2000);
+    }
+
+    function togglePeekerService() {
+      state.peeker.isServiceActive = !state.peeker.isServiceActive;
+      const txt = document.getElementById('peekerServiceStateText');
+      if (txt) txt.innerText = state.peeker.isServiceActive ? 'Sentry: ACTIVE' : 'Sentry: IDLE';
+      
+      if (statusCameraDot) {
+        statusCameraDot.style.display = state.peeker.isServiceActive ? 'block' : 'none';
+      }
+      if (peekerHud) {
+        peekerHud.style.display = state.peeker.isServiceActive ? 'block' : 'none';
+      }
+
+      if (state.peeker.isServiceActive) {
+        startPeekerHeartbeat();
+      } else {
+        if (state.peeker.scanTimer) clearInterval(state.peeker.scanTimer);
+        dismissPeekerVeil();
+      }
+      
+      playClickHaptic(state.peeker.isServiceActive ? 620 : 300, 'sine', 0.04);
+      showToast(state.peeker.isServiceActive ? 'CameraX Sentry active (0.5 FPS) · Android 12+ green dot visible' : 'CameraX Sentry turned off');
+    }
+
+    function triggerPeekerSimulation() {
+      if (!state.peeker.isServiceActive) {
+        togglePeekerService();
+      }
+      
+      state.peeker.isPeekerDetected = true;
+      if (hudPeekerFace) hudPeekerFace.style.display = 'block';
+      if (hudStatusText) {
+        hudStatusText.innerHTML = '<span style="color:#ef4444;font-weight:700;">⚠️ PEEKER DETECTED (+1 Face)</span>';
+      }
+
+      // Two immediate tactile haptic pulses (40ms on, 80ms off, 40ms on)
+      playClickHaptic(680, 'sawtooth', 0.05);
+      setTimeout(() => {
+        playClickHaptic(680, 'sawtooth', 0.05);
+      }, 120);
+
+      // Drop top 70% privacy veil
+      state.peeker.isVeilDropped = true;
+      if (peekerVeil) {
+        peekerVeil.classList.add('active');
+      }
+
+      showToast('🚨 PEEKER SENTRY TRIGGERED: Secondary face looking at screen! Top 70% masked.', '⚠️');
+    }
+
+    function dismissPeekerVeil() {
+      state.peeker.isPeekerDetected = false;
+      state.peeker.isVeilDropped = false;
+      if (peekerVeil) {
+        peekerVeil.classList.remove('active');
+      }
+      if (hudPeekerFace) hudPeekerFace.style.display = 'none';
+      if (hudStatusText) {
+        hudStatusText.innerText = `Scanning (0.5 FPS · Frame #${state.peeker.frameCount}: 1 face centered)`;
+      }
+      playClickHaptic(420, 'sine', 0.03);
+      showToast('Privacy veil dismissed · Normal view restored');
+    }
+
+    function updatePeekerSensitivity(val) {
+      state.peeker.ratioThreshold = parseInt(val, 10) / 100;
+      const el = document.getElementById('peekerRatioVal');
+      if (el) el.innerText = state.peeker.ratioThreshold.toFixed(2);
+    }
+
+    function updatePeekerAngle(val) {
+      state.peeker.yawAngleLimit = parseInt(val, 10);
+      const el = document.getElementById('peekerAngleVal');
+      if (el) el.innerText = `${state.peeker.yawAngleLimit}°`;
+    }
+
+    // ========================================================
+    // NOVEL FEATURE 2: DECOY PIN TOUCH SCRAMBLER
+    // ========================================================
+    function togglePinScrambler() {
+      state.scrambler.isActive = !state.scrambler.isActive;
+      const txt = document.getElementById('scramblerStateText');
+      if (txt) txt.innerText = state.scrambler.isActive ? 'Scrambler: ACTIVE' : 'Scrambler: IDLE';
+      playClickHaptic(state.scrambler.isActive ? 540 : 280, 'sine', 0.03);
+      showToast(state.scrambler.isActive ? 'Decoy PIN Touch Scrambler active' : 'Decoy PIN Touch Scrambler disabled');
+    }
+
+    function updateDecoyCount(val) {
+      state.scrambler.decoyCount = parseInt(val, 10);
+      const el = document.getElementById('decoyCountVal');
+      if (el) el.innerText = state.scrambler.decoyCount;
+    }
+
+    function toggleConfidenceMode() {
+      state.scrambler.userConfidenceDot = !state.scrambler.userConfidenceDot;
+      const btn = document.getElementById('btnConfidenceMode');
+      if (btn) btn.classList.toggle('active', state.scrambler.userConfidenceDot);
+      playClickHaptic(460, 'sine', 0.02);
+      showToast(state.scrambler.userConfidenceDot ? 'User Confidence Dot: Real tap has distinct core marker' : 'Full Blind Scrambler: All ripples identical');
+    }
+
+    function toggleLagSimulation() {
+      state.scrambler.hasLatencyLag = !state.scrambler.hasLatencyLag;
+      const btn = document.getElementById('btnLagSim');
+      if (btn) btn.classList.toggle('active', state.scrambler.hasLatencyLag);
+      playClickHaptic(380, 'triangle', 0.03);
+      showToast(state.scrambler.hasLatencyLag ? '⚠️ 60ms Async Lag simulated (Vulnerable to slow-mo cameras!)' : 'Synchronous frame-sync (Zero lag decoys)');
+    }
+
+    function handleKeypadTap(key, event, btnElement) {
+      event.preventDefault();
+      event.stopPropagation();
+      playClickHaptic(520, 'sine', 0.025);
+
+      // If clicked from the Studio Quick Test Pad, ensure phone displays the PIN Pad
+      const isStudioBtn = btnElement && btnElement.closest('#studioTestButtons');
+      if (isStudioBtn && state.activeAppId !== 'appPinPad') {
+        const pinChip = document.getElementById('chipPinPad');
+        switchApp('appPinPad', pinChip);
+      }
+
+      // Update PIN readout state
+      if (key === 'C') {
+        state.scrambler.enteredPin = '';
+      } else if (key === 'OK') {
+        if (state.scrambler.enteredPin.length === 4) {
+          showToast('PIN Verified: Cold vault unlocked!', '🔓');
+          state.scrambler.enteredPin = '';
+        } else {
+          showToast('Enter 4 digits', '⚠️');
+        }
+      } else {
+        if (state.scrambler.enteredPin.length < 4) {
+          state.scrambler.enteredPin += key;
+          if (state.scrambler.enteredPin.length === 4) {
+            setTimeout(() => {
+              showToast('4-Digit PIN entered securely');
+            }, 200);
+          }
+        }
+      }
+
+      // Update PIN dot UI
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`dot${i}`);
+        if (dot) {
+          dot.classList.toggle('filled', i < state.scrambler.enteredPin.length);
+        }
+      }
+
+      // Keep OCR viewfinder in sync
+      updateOcrViewfinder();
+
+      // Render Ripple Helper
+      const renderRippleAt = (x, y, isReal) => {
+        const ripple = document.createElement('div');
+        ripple.className = `scramble-ripple ${isReal ? 'real-user' : 'decoy'}`;
+        if (isReal && !state.scrambler.userConfidenceDot) {
+          ripple.classList.remove('real-user');
+          ripple.classList.add('decoy');
+        }
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        phoneRippleLayer.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 280);
+      };
+
+      // Determine real tap coordinates relative to phoneScreen
+      const screenRect = phoneScreen.getBoundingClientRect();
+      const keypadBtns = Array.from(document.querySelectorAll('#phoneKeypadGrid .keypad-btn'));
+      const targetPhoneBtn = keypadBtns.find(b => {
+        const text = b.textContent.trim();
+        if (key === 'C') return text.includes('⌫') || text.startsWith('C');
+        if (key === 'OK') return text.includes('✓') || text.startsWith('OK');
+        return text.startsWith(key);
+      });
+
+      let realX, realY;
+      if (isStudioBtn && targetPhoneBtn) {
+        const bRect = targetPhoneBtn.getBoundingClientRect();
+        realX = bRect.left + bRect.width / 2 - screenRect.left;
+        realY = bRect.top + bRect.height / 2 - screenRect.top;
+      } else {
+        realX = event.clientX - screenRect.left;
+        realY = event.clientY - screenRect.top;
+      }
+
+      renderRippleAt(realX, realY, true);
+
+      // If Scrambler is active, generate K randomized decoy coordinates across other buttons
+      if (state.scrambler.isActive) {
+        const decoyTargets = [];
+        
+        keypadBtns.forEach(b => {
+          if (b !== targetPhoneBtn && b !== btnElement) {
+            const bRect = b.getBoundingClientRect();
+            if (bRect.width > 0 && bRect.height > 0) {
+              decoyTargets.push({
+                x: bRect.left + bRect.width / 2 - screenRect.left,
+                y: bRect.top + bRect.height / 2 - screenRect.top
+              });
+            }
+          }
+        });
+
+        // Shuffle targets
+        decoyTargets.sort(() => 0.5 - Math.random());
+        const count = Math.min(state.scrambler.decoyCount, decoyTargets.length);
+
+        const spawnDecoys = () => {
+          for (let i = 0; i < count; i++) {
+            // Apply slight random offset to simulate organic dispersion
+            const dx = (Math.random() - 0.5) * 12;
+            const dy = (Math.random() - 0.5) * 12;
+            renderRippleAt(decoyTargets[i].x + dx, decoyTargets[i].y + dy, false);
+          }
+        };
+
+        if (state.scrambler.hasLatencyLag) {
+          setTimeout(spawnDecoys, 60); // Simulated async latency defect
+        } else {
+          spawnDecoys(); // Synchronous frame-0 execution
+        }
+      }
+    }
+
+    // ========================================================
+    // NOVEL FEATURE 3: ANTI-OCR MOIRÉ WATERMARK NOISE
+    // ========================================================
+    function toggleMoireGrid() {
+      state.moire.isActive = !state.moire.isActive;
+      const txt = document.getElementById('moireStateText');
+      if (txt) txt.innerText = state.moire.isActive ? 'Moiré: ACTIVE' : 'Moiré: DISABLED';
+      
+      if (moireGridLayer) {
+        moireGridLayer.classList.toggle('active', state.moire.isActive);
+        if (state.moire.isActive) {
+          updateMoireShader();
+        }
+      }
+
+      playClickHaptic(state.moire.isActive ? 640 : 280, 'sine', 0.04);
+      updateOcrViewfinder();
+      showToast(state.moire.isActive ? 'Anti-OCR micro-steganographic moiré grid engaged' : 'Moiré grid disabled');
+    }
+
+    function updateMoirePitch(val) {
+      state.moire.pitch = parseInt(val, 10);
+      const el = document.getElementById('moirePitchVal');
+      if (el) el.innerText = `${state.moire.pitch}px`;
+      updateMoireShader();
+      updateOcrViewfinder();
+    }
+
+    function updateMoireAngle(val) {
+      state.moire.angle = parseInt(val, 10);
+      const el = document.getElementById('moireAngleVal');
+      if (el) el.innerText = `${state.moire.angle}°`;
+      updateMoireShader();
+      updateOcrViewfinder();
+    }
+
+    function updateMoireShader() {
+      if (!moireGridLayer) return;
+      const p = state.moire.pitch;
+      const a = state.moire.angle;
+      moireGridLayer.style.background = `repeating-linear-gradient(${a}deg, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.16) 2px, transparent 2px, transparent ${p}px)`;
+      moireGridLayer.style.backgroundSize = `${p}px ${p}px`;
+    }
+
+    function toggleMoireDrift() {
+      state.moire.isDrifting = !state.moire.isDrifting;
+      const btn = document.getElementById('btnMoireDrift');
+      if (btn) btn.classList.toggle('active', state.moire.isDrifting);
+      if (moireGridLayer) {
+        moireGridLayer.classList.toggle('drifting', state.moire.isDrifting);
+      }
+      playClickHaptic(440, 'triangle', 0.03);
+      updateOcrViewfinder();
+      showToast(state.moire.isDrifting ? '60Hz Phase-drift ON (Persistence of vision active)' : 'Static grid mode');
+    }
+
+    function toggleDeMoireSim() {
+      state.moire.aiDeMoireActive = !state.moire.aiDeMoireActive;
+      const btn = document.getElementById('btnDeMoireSim');
+      if (btn) btn.classList.toggle('active', state.moire.aiDeMoireActive);
+      playClickHaptic(500, 'sine', 0.03);
+      updateOcrViewfinder();
+      showToast(state.moire.aiDeMoireActive ? 'AI De-Moiré Filter enabled in simulated camera ISP' : 'Standard Optical Sensor sampling');
+    }
+
+    function updateOcrViewfinder() {
+      if (!ocrMeterFill || !ocrConfidenceText) return;
+
+      // Determine target text from currently active app screen
+      let sensitiveText = '"$28,490.50 (VaultBank Balance)"';
+      if (state.activeAppId === 'appChat') {
+        sensitiveText = '"894-112 (Signal Emergency OTP Code)"';
+      } else if (state.activeAppId === 'appAuth') {
+        sensitiveText = '"739 204 (Binance 2FA Secret Key)"';
+      } else if (state.activeAppId === 'appPinPad') {
+        const pinMasked = state.scrambler.enteredPin.length > 0
+          ? `${state.scrambler.enteredPin} (Entered ATM PIN)`
+          : '•••• (ATM PIN Pad)';
+        sensitiveText = `"${pinMasked}"`;
+      } else if (state.activeAppId === 'appGhost') {
+        sensitiveText = '"GhostScreen Master Encryption Token"';
+      } else if (state.activeAppId === 'appRecents') {
+        sensitiveText = state.recents.isShieldActive && !state.recents.isLatencyRace
+          ? '"[Redacted / Camouflage Veil Active]"'
+          : '"$28,490.50 (Recents Thumbnail Leak)"';
+      }
+
+      if (!state.moire.isActive) {
+        // Moiré disabled -> camera reads clean text
+        ocrMeterFill.style.width = '98.9%';
+        ocrMeterFill.style.backgroundColor = '#10b981';
+        ocrConfidenceText.innerText = '98.9%';
+        ocrConfidenceText.style.color = '#10b981';
+        ocrCapturedText.innerText = `Detected Text: ${sensitiveText}`;
+        ocrCapturedText.style.color = '#fff';
+        ocrStatusMsg.innerText = 'Optical Aliasing: None · OCR Confidence High';
+        if (ocrScanBadge) {
+          ocrScanBadge.innerText = 'READABLE (98.9%)';
+          ocrScanBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+          ocrScanBadge.style.color = '#6ee7b7';
+        }
+      } else {
+        // Moiré active
+        if (state.moire.aiDeMoireActive && !state.moire.isDrifting) {
+          // AI De-Moiré can partially clean static grids
+          ocrMeterFill.style.width = '54.2%';
+          ocrMeterFill.style.backgroundColor = '#f59e0b';
+          ocrConfidenceText.innerText = '54.2%';
+          ocrConfidenceText.style.color = '#f59e0b';
+          ocrCapturedText.innerText = `Detected Text: ${sensitiveText.slice(0, 10)}~#? [DEGRADED]`;
+          ocrCapturedText.style.color = '#fde68a';
+          ocrStatusMsg.innerText = 'AI De-Moiré partial suppression · Character error rate 45%';
+          if (ocrScanBadge) {
+            ocrScanBadge.innerText = 'DEGRADED (54.2%)';
+            ocrScanBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+            ocrScanBadge.style.color = '#fde68a';
+          }
+        } else {
+          // Dynamic 60Hz phase drift defeats AI de-moiré
+          ocrMeterFill.style.width = '11.4%';
+          ocrMeterFill.style.backgroundColor = '#ef4444';
+          ocrConfidenceText.innerText = '11.4%';
+          ocrConfidenceText.style.color = '#ef4444';
+          ocrCapturedText.innerText = 'Detected Text: "[OCR Error: Severe Moiré Interference Noise]"';
+          ocrCapturedText.style.color = '#fca5a5';
+          ocrStatusMsg.innerText = 'Optical Aliasing: High Beat Frequency (18.2 lp/mm) · OCR Blocked';
+          if (ocrScanBadge) {
+            ocrScanBadge.innerText = 'BLOCKED (11.4%)';
+            ocrScanBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+            ocrScanBadge.style.color = '#fca5a5';
+          }
+        }
+      }
+    }
+
+    // ========================================================
+    // NOVEL FEATURE 4: TASK-SWITCHER CAMOUFLAGE (RECENTS SHIELD)
+    // ========================================================
+    function toggleRecentsShield() {
+      state.recents.isShieldActive = !state.recents.isShieldActive;
+      const txt = document.getElementById('recentsShieldStateText');
+      if (txt) txt.innerText = state.recents.isShieldActive ? 'Shield: ACTIVE' : 'Shield: DISABLED';
+      
+      if (recentsCamouflageVeil) {
+        recentsCamouflageVeil.classList.toggle('leaked', !state.recents.isShieldActive);
+      }
+
+      playClickHaptic(state.recents.isShieldActive ? 560 : 280, 'sine', 0.03);
+      showToast(state.recents.isShieldActive ? 'Recents Camouflage Shield enabled' : 'Recents Shield disabled (Screenshots exposed)');
+    }
+
+    function toggleRecentsLatencyRace() {
+      state.recents.isLatencyRace = !state.recents.isLatencyRace;
+      const btn = document.getElementById('btnRecentsLatencyRace');
+      if (btn) {
+        btn.innerHTML = state.recents.isLatencyRace
+          ? '<span>⏱️ Latency Race: 120ms (Snapshot Leaks!)</span>'
+          : '<span>⏱️ Latency Race: 0ms (Pre-Emptive)</span>';
+        btn.classList.toggle('active', state.recents.isLatencyRace);
+      }
+      playClickHaptic(420, 'triangle', 0.03);
+      showToast(state.recents.isLatencyRace ? '120ms Late Accessibility Callback simulated' : '0ms Pre-Emptive Instant Stamping');
+    }
+
+    function triggerRecentsTransition() {
+      playClickHaptic(480, 'sine', 0.04);
+      switchApp('appRecents', document.getElementById('chipRecents'));
+
+      if (!state.recents.isShieldActive) {
+        // Shield disabled -> always exposed
+        if (recentsCamouflageVeil) recentsCamouflageVeil.classList.add('leaked');
+        showToast('Recents Overview: Data EXPOSED in system thumbnail (Shield Disabled)', '⚠️');
+      } else {
+        if (state.recents.isLatencyRace) {
+          // 120ms latency bug: thumbnail snapshot captured before accessibility callback
+          if (recentsCamouflageVeil) recentsCamouflageVeil.classList.add('leaked');
+          showToast('⚠️ Latency Defect: System snapshot captured before veil attached!', '🚨');
+          setTimeout(() => {
+            if (recentsCamouflageVeil) recentsCamouflageVeil.classList.remove('leaked');
+            showToast('Veil attached 120ms late (Too late for system screenshot)');
+          }, 350);
+        } else {
+          // 0ms pre-emptive stamping
+          if (recentsCamouflageVeil) recentsCamouflageVeil.classList.remove('leaked');
+          showToast('🛡️ GhostScreen Camouflage: Snapshot 100% Redacted in zero-latency pass');
+        }
+      }
+    }
+
+    function restoreFromRecents() {
+      playClickHaptic(520, 'triangle', 0.04);
+      const targetAppId = state.previousAppId || 'appBank';
+      const chipMap = {
+        'appBank': 'chipBank',
+        'appChat': 'chipChat',
+        'appAuth': 'chipAuth',
+        'appPinPad': 'chipPinPad',
+        'appGhost': 'chipGhost'
+      };
+      const chipBtn = document.getElementById(chipMap[targetAppId] || 'chipBank');
+      switchApp(targetAppId, chipBtn);
+      const appNames = {
+        'appBank': 'VaultBank Mobile',
+        'appChat': 'Secret Chat',
+        'appAuth': '2FA Keys',
+        'appPinPad': 'ATM PIN Pad',
+        'appGhost': 'GhostScreen App'
+      };
+      showToast(`Restored ${appNames[targetAppId] || targetAppId}`);
+    }
+
+    // ==========================================
+    // TOAST NOTIFIER
+    // ==========================================
+    let toastTimeout = null;
+    function showToast(text, icon = '🛡️') {
+      const toast = document.getElementById('toastMsg');
+      const toastContent = document.getElementById('toastContent');
+      const toastIcon = document.getElementById('toastIcon');
+      if (!toast || !toastContent || !toastIcon) return;
+      toastContent.innerText = text;
+      toastIcon.innerText = icon;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3400);
+    }
+
+    // Initialize clock and overlay layout on load
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const clock = document.getElementById('phoneClock');
+      if (clock) clock.innerText = `${h}:${m}`;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+    updateOverlayLayout();
+    updateOcrViewfinder();
+
+    // Start with CameraX Sentry active to display green dot and pulse at 0.5 FPS
+    if (statusCameraDot) statusCameraDot.style.display = 'block';
+    if (peekerHud) peekerHud.style.display = 'block';
+    if (ghostOverlay) ghostOverlay.style.pointerEvents = 'none';
+    startPeekerHeartbeat();
+  </script>
+</body>
+</html>

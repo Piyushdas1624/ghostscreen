@@ -1,3 +1,4 @@
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
@@ -25,6 +26,34 @@ val versionBuild = versionProperties.getProperty("VERSION_BUILD", "1").toInt()
 val calculatedVersionCode = (versionMajor * 10000) + (versionMinor * 100) + versionPatch
 val calculatedVersionName = "$versionMajor.$versionMinor.$versionPatch-b$versionBuild"
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { localProperties.load(it) }
+}
+
+fun getSigningProperty(key: String): String? {
+    return System.getenv(key)
+        ?: (project.findProperty(key) as? String)
+        ?: localProperties.getProperty(key)
+}
+
+val releaseStoreFilePath: String? = getSigningProperty("RELEASE_STORE_FILE")
+val releaseStorePassword: String? = getSigningProperty("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias: String? = getSigningProperty("RELEASE_KEY_ALIAS")
+val releaseKeyPassword: String? = getSigningProperty("RELEASE_KEY_PASSWORD")
+
+val releaseStoreFile: File? = releaseStoreFilePath?.takeIf { it.isNotBlank() }?.let { path ->
+    val candidate = File(path)
+    if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
+
+val hasReleaseKeystore = releaseStoreFile != null &&
+    releaseStoreFile.exists() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.etaegord.ghostscreen"
     compileSdk = 35
@@ -39,6 +68,27 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseKeystore) {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            } else {
+                val debugConfig = getByName("debug")
+                storeFile = debugConfig.storeFile
+                storePassword = debugConfig.storePassword
+                keyAlias = debugConfig.keyAlias
+                keyPassword = debugConfig.keyPassword
+            }
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -46,6 +96,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

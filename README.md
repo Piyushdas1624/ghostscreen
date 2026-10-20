@@ -1,8 +1,8 @@
-# GhostScreen
+# GhostScreen — Open-Source Android Privacy Screen & Screen Masking App
 
-An open-source Android screen-masking and privacy overlay utility built with **Kotlin** and **Jetpack Compose** to keep shoulder-surfers out of your business in public spaces, transit, or crowded classrooms.
+**GhostScreen** (also searched as **Ghost Screen**) is an open-source Android security and privacy application built with **Kotlin** and **Jetpack Compose**. It renders a hardware-accelerated, customizable privacy overlay (`TYPE_ACCESSIBILITY_OVERLAY`) to mask, dim, or blur sensitive parts of your mobile display and prevent shoulder-surfing in public spaces, transit, or classrooms. Processing and app-detection run **100% offline on your device** with zero network permissions (`INTERNET` permission is strictly omitted), zero telemetry, and no personal data saved or transmitted.
 
-Most "privacy screen" apps on the Play Store are bloated with ads, sketchy network permissions, or clunky legacy XML overlays. GhostScreen does one job cleanly: it renders a customizable, hardware-accelerated dimming and masking overlay over your screen with zero network tracking and zero telemetry.
+Most "privacy screen" apps on the Play Store are bloated with ads, sketchy network permissions, or clunky legacy XML overlays. GhostScreen does one job cleanly: it renders an on-demand, hardware-accelerated dimming and masking overlay over your screen with zero network tracking and zero telemetry.
 
 ---
 
@@ -37,7 +37,7 @@ Physical privacy screen protectors permanently cut display brightness and ruin v
 | **Service Core** | `AccessibilityService` + `ForegroundService` |
 | **State Management** | Kotlin Coroutines & `StateFlow` |
 | **Persistence** | Room DB (`AuditLog`) + EncryptedSharedPreferences (Google Tink) |
-| **Build System** | Gradle 8.13 + AGP 8.8 (Target SDK 35, Min SDK 26) |
+| **Build System** | Gradle 8.13 + AGP 8.13.2 (Target SDK 35, Min SDK 26) |
 
 ---
 
@@ -92,6 +92,16 @@ GhostScreen only requests what is strictly necessary to function:
 
 ---
 
+## Frequently Asked Questions (FAQ)
+
+### What is GhostScreen (Ghost Screen) for Android?
+**GhostScreen** is a free, open-source privacy screen and screen-masking utility for Android 8.0+ (SDK 26–35). Unlike physical privacy screen protectors that permanently darken your display, GhostScreen provides an on-demand software privacy shroud (Split Shroud, Box Cutout, and Frosted Glass Blur) with full touch pass-through.
+
+### How is GhostScreen on Android different from the Windows Ghost Screen app?
+While desktop privacy apps rely on webcam presence detection to blur a PC monitor when you walk away, **GhostScreen for Android** protects your screen *while you are actively using it* in public. It uses Android's native `AccessibilityService` and `WindowManager` overlays to hide sensitive chats, credentials, and notifications from nearby prying eyes without using your camera or battery-draining background video processing.
+
+---
+
 ## Roadmap
 
 - [ ] Custom pattern/noise shaders to break up high-contrast text at sharp angles
@@ -103,7 +113,7 @@ GhostScreen only requests what is strictly necessary to function:
 
 ## Contributing
 
-Found a bug or have an optimization for the overlay service? Pull requests and issues are welcome. Keep changes focused, follow Conventional Commits, and verify tests pass cleanly before submitting:
+Found a bug or have an optimization for the overlay service? Pull requests and issues are welcome. Consult [`AGENTS.md`](AGENTS.md), [`DECISIONS.md`](DECISIONS.md), and [`CONTRIBUTING.md`](CONTRIBUTING.md), follow Conventional Commits, and verify tests pass cleanly before submitting:
 
 ```bash
 ./gradlew testDebugUnitTest
