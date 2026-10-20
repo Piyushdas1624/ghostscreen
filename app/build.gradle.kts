@@ -77,10 +77,31 @@ android {
                 keyPassword = releaseKeyPassword
             } else {
                 val debugConfig = getByName("debug")
-                storeFile = debugConfig.storeFile
-                storePassword = debugConfig.storePassword
-                keyAlias = debugConfig.keyAlias
-                keyPassword = debugConfig.keyPassword
+                val fallbackFile = debugConfig.storeFile ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
+                if (!fallbackFile.exists()) {
+                    fallbackFile.parentFile?.mkdirs()
+                    try {
+                        project.exec {
+                            commandLine(
+                                "keytool", "-genkeypair",
+                                "-alias", "androiddebugkey",
+                                "-keypass", "android",
+                                "-keystore", fallbackFile.absolutePath,
+                                "-storepass", "android",
+                                "-dname", "CN=Android Debug,O=Android,C=US",
+                                "-keyalg", "RSA",
+                                "-keysize", "2048",
+                                "-validity", "10000"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        println("Note: Fallback keystore creation: ${e.message}")
+                    }
+                }
+                storeFile = fallbackFile
+                storePassword = debugConfig.storePassword ?: "android"
+                keyAlias = debugConfig.keyAlias ?: "androiddebugkey"
+                keyPassword = debugConfig.keyPassword ?: "android"
             }
             enableV1Signing = true
             enableV2Signing = true
