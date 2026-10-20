@@ -32,10 +32,16 @@ if (localPropertiesFile.exists()) {
     FileInputStream(localPropertiesFile).use { localProperties.load(it) }
 }
 
-val releaseStoreFilePath: String? = System.getenv("RELEASE_STORE_FILE") ?: localProperties.getProperty("RELEASE_STORE_FILE")
-val releaseStorePassword: String? = System.getenv("RELEASE_STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_STORE_PASSWORD")
-val releaseKeyAlias: String? = System.getenv("RELEASE_KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
-val releaseKeyPassword: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
+fun getSigningProperty(key: String): String? {
+    return System.getenv(key)
+        ?: (project.findProperty(key) as? String)
+        ?: localProperties.getProperty(key)
+}
+
+val releaseStoreFilePath: String? = getSigningProperty("RELEASE_STORE_FILE")
+val releaseStorePassword: String? = getSigningProperty("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias: String? = getSigningProperty("RELEASE_KEY_ALIAS")
+val releaseKeyPassword: String? = getSigningProperty("RELEASE_KEY_PASSWORD")
 
 val releaseStoreFile: File? = releaseStoreFilePath?.takeIf { it.isNotBlank() }?.let { path ->
     val candidate = File(path)
@@ -63,15 +69,23 @@ android {
     }
 
     signingConfigs {
-        if (hasReleaseKeystore) {
-            create("release") {
+        create("release") {
+            if (hasReleaseKeystore) {
                 storeFile = releaseStoreFile
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
-                enableV1Signing = true
-                enableV2Signing = true
+            } else {
+                val debugConfig = getByName("debug")
+                storeFile = debugConfig.storeFile
+                storePassword = debugConfig.storePassword
+                keyAlias = debugConfig.keyAlias
+                keyPassword = debugConfig.keyPassword
             }
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = true
         }
     }
 
@@ -82,11 +96,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
