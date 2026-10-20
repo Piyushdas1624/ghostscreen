@@ -1,3 +1,4 @@
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
@@ -25,6 +26,28 @@ val versionBuild = versionProperties.getProperty("VERSION_BUILD", "1").toInt()
 val calculatedVersionCode = (versionMajor * 10000) + (versionMinor * 100) + versionPatch
 val calculatedVersionName = "$versionMajor.$versionMinor.$versionPatch-b$versionBuild"
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    FileInputStream(localPropertiesFile).use { localProperties.load(it) }
+}
+
+val releaseStoreFilePath: String? = System.getenv("RELEASE_STORE_FILE") ?: localProperties.getProperty("RELEASE_STORE_FILE")
+val releaseStorePassword: String? = System.getenv("RELEASE_STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias: String? = System.getenv("RELEASE_KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS")
+val releaseKeyPassword: String? = System.getenv("RELEASE_KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD")
+
+val releaseStoreFile: File? = releaseStoreFilePath?.takeIf { it.isNotBlank() }?.let { path ->
+    val candidate = File(path)
+    if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
+
+val hasReleaseKeystore = releaseStoreFile != null &&
+    releaseStoreFile.exists() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.etaegord.ghostscreen"
     compileSdk = 35
@@ -39,6 +62,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -46,6 +82,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
